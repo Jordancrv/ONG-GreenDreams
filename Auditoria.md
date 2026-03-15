@@ -34,36 +34,6 @@
 
 ---
 
-### ROLES (Gestión de roles y permisos) - ✅ CREADA
-
-#### Estructura
-- **id**: int NOT NULL AUTO_INCREMENT PK
-- **code**: varchar(50) NOT NULL UNIQUE (ADMIN, INSTRUCTOR, STUDENT)
-- **name**: varchar(255) NOT NULL
-- **description**: text NULL
-- **created_at**: datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-- **updated_at**: datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-
-#### Índices
-- INDEX (code) - búsqueda rápida por código de rol
-- PK (id)
-
-#### Datos Iniciales
-- ADMIN: Acceso total al sistema, gestión de usuarios y configuración
-- INSTRUCTOR: Crear y gestionar cursos, lecciones y evaluaciones
-- STUDENT: Acceso a cursos, lecciones e intentos de evaluaciones
-
-#### Ventajas vs Enum
-| Aspecto | Enum | Tabla roles |
-|---------|------|------------|
-| Escalabilidad | ❌ Difícil | ✅ Agrega valores sin migración |
-| Permisos | ❌ No soportados | ✅ Puede expandir con columna permissions |
-| Auditoría | ❌ Sin historial | ✅ created_at/updated_at |
-| FK constraints | ❌ No | ✅ Integridad referencial |
-| Cambios futuros | ❌ Migration required | ✅ Solo INSERT/UPDATE |
-
-
----
 
 ### SUBSCRIPTIONS (Gestión de subscripciones)
 
@@ -556,7 +526,7 @@
 6. ✅ LESSON_PROGRESS: user_id y lesson_id NOT NULL + UNIQUE(user_id, lesson_id)
 7. ✅ ATTEMPTS: quiz_id y user_id NOT NULL
 8. ✅ ANSWERS: attempt_id y question_id NOT NULL (option_id solo NULL en OPEN)
-9. ✅ USERS + ROLES: Migrar de enum a tabla roles separada
+9. ✅ USERS: Soft delete + status (se mantiene role como enum en users)
 
 ### Prioridad Media (Consistencia funcional)
 1. ✅ LESSON_PROGRESS: progress_pct rango 0-100 (CHECK constraint)
@@ -599,28 +569,43 @@ Crear migraciones incrementales y seguras usando TypeORM para:
 
 | # | Nombre | Archivo | Estado | Cambios |
 |---|--------|---------|--------|---------|
-| 001+002 | InitialMigration | InitialMigration.ts | ✅ EJECUTADA | FK NOT NULL + UNIQUE constraints |
-| 003 | Validaciones | ValidacionesRangoYFechas.ts | ✅ EJECUTADA | CHECK constraints ranges/dates |
-| 004 | Estandarización | EstandarizacionNaming.ts | ✅ EJECUTADA | Placeholder (reversible) |
-| 005 | Auditoría | AuditLogYSoftDelete.ts | ✅ EJECUTADA | subscriptions_logs + soft delete |
-| 006 | Tabla Roles | CrearTablaRoles.ts | ✅ EJECUTADA | Migrar enum role → tabla roles |
-| 007+ | Futuras | --- | ⏳ PENDIENTES | Normalizaciones, índices, evolución |
+| 000 | InitialSchema | 1699999999999-InitialSchema.ts | ✅ EJECUTADA | Crea esquema base vía synchronize() |
+| 001 | InitialMigration | 1700000001001-InitialMigration.ts | ✅ EJECUTADA | Hardening + validaciones + auditoría + soft delete |
+| 002+ | Futuras | --- | ⏳ PENDIENTES | Performance, normalización y reglas de negocio |
 
 
 ---
 
 ## PARTE 4: MIGRACIONES EJECUTADAS Y EXPLICACIONES
 
-### Migración 001+002: InitialMigration
+### Migración 000: InitialSchema
+
+**Archivo**: `backend/src/database/migrations/1699999999999-InitialSchema.ts`
+
+#### Objetivo
+Garantizar que la base tenga el esquema inicial completo antes de ejecutar hardening.
+
+#### Cambios Principales
+
+**1) Creación de esquema base**
+- Ejecuta `queryRunner.connection.synchronize()` en el `up`.
+- Materializa tablas desde entidades para evitar errores por tablas inexistentes.
+
+**2) Reversión controlada**
+- Ejecuta `queryRunner.clearDatabase()` en el `down`.
+
+#### Resultado
+- Se eliminó el fallo inicial donde la migración consolidada corría sobre una BD sin tablas base.
+
+
+---
+
+### Migración: InitialMigration
 
 **Archivo**: `backend/src/database/migrations/1700000001001-InitialMigration.ts`
 
-**Archivo De Explicación**: `1700000001001-InitialMigration.explicacion.md`
-
 #### Objetivo
-Endurecer la integridad de datos. Dos fases combinadas:
-- **Fase 001**: Convertir FKs críticas a NOT NULL
-- **Fase 002**: Agregar restricciones UNIQUE para orden funcional
+Consolidar hardening funcional en una sola migración robusta e idempotente.
 
 #### Cambios Principales
 
@@ -666,186 +651,30 @@ Aplica a:
 - course_modules(course_id, index)
 - lessons(module_id, index)
 
-#### Reversión (down)
-- DROP INDEX UNIQUE en orden inverso
-- MODIFY columnas a NULL
-- Restaurar FKs originales
+**6) Validaciones de negocio**
+- CHECK de `lesson_progress.progress_pct` en rango 0-100.
+- `live_classes.end_at` obligatorio y validación `end_at > start_at`.
+- CHECK de fechas en `cohorts`.
+- Limpieza de capacidades inválidas (`<= 0`) en `cohorts` y `live_classes`.
 
+**7) Estandarización (placeholder)**
+- Se mantiene sin renombrados destructivos para no romper FKs.
 
----
+**8) Auditoría + Soft Delete**
+- Creación de `subscriptions_logs`.
+- En `users`: agrega `deleted_at`, `status`, e índices para filtrado de activos.
 
-### Migración 003: ValidacionesRangoYFechas
-
-**Archivo**: `backend/src/database/migrations/1700000003001-ValidacionesRangoYFechas.ts`
-
-**Archivo De Explicación**: `1700000003001-ValidacionesRangoYFechas.explicacion.md`
-
-#### Objetivo
-Agregar validaciones de negocio usando CHECK constraints en MySQL 8.0+
-
-#### Cambios Principales
-
-**1) lesson_progress.progress_pct rango 0-100**
-```sql
-ALTER TABLE lesson_progress 
-ADD CONSTRAINT chk_progress_pct CHECK (progress_pct BETWEEN 0 AND 100)
-```
-- Previene valores fuera de rango
-- Valida a nivel DB, no solo backend
-
-**2) live_classes validaciones**
-```sql
-ALTER TABLE live_classes MODIFY end_at datetime NOT NULL
-ALTER TABLE live_classes 
-ADD CONSTRAINT chk_live_end_after_start CHECK (end_at > start_at)
-```
-- end_at ahora obligatorio
-- Asegura que fin sea posterior al inicio
-
-**3) cohorts validaciones**
-```sql
-ALTER TABLE cohorts 
-ADD CONSTRAINT chk_cohort_end_after_start CHECK (end_at > start_at)
-ALTER TABLE cohorts 
-ADD CONSTRAINT chk_cohort_capacity_positive CHECK (capacity > 0)
-```
-- Valida rango de fechas
-- Valida que capacidad sea positiva
-
-#### Ventajas
-- ✅ Validación centralizada en DB, no depende de backend
-- ✅ Imposible insertar datos inválidos desde cualquier fuente
-- ✅ Performance: validación rápida en DB
+**9) Endurecimiento idempotente**
+- Antes de crear índices/constraints/columnas, verifica existencia con `INFORMATION_SCHEMA` o `hasTable/hasColumn`.
+- Evita fallos por re-ejecución parcial (duplicados de índices/constraints/columnas).
 
 #### Reversión (down)
-- DROP CONSTRAINT por constraint
+- Reversión LIFO de todas las fases integradas en el mismo archivo.
+- Incluye eliminación de índices/checks/columnas agregadas durante hardening.
 
-
----
-
-### Migración 004: EstandarizacionNaming
-
-**Archivo**: `backend/src/database/migrations/1700000004001-EstandarizacionNaming.ts`
-
-#### Objetivo
-Placeholder seguro para operaciones futuras de renombrado de campos.
-
-**Status**: ✅ EJECUTADA como placeholder
-**Nota**: El renombrado real de `index` → `position` se implementará cuando se cumpla con todas las dependencias de FK.
-
-#### Por qué Placeholder?
-- Renombrar columnas con FK en MySQL requiere:
-  1. Eliminar FK
-  2. Eliminar índices UNIQUE que dependan
-  3. Renombrar columna
-  4. Recrear índices
-  5. Recrear FKs
-- La lógica es defensiva y requiere análisis profundo de dependencias
-- Implementación pospuesta para evitar riesgos innecesarios
-
-#### Próximos Pasos
-- Cuando se necesite renombrar en producción, ejecutar plan defensivo con backup previo
-
-
----
-
-### Migración 005: AuditLogYSoftDelete
-
-**Archivo**: `backend/src/database/migrations/1700000002001-AuditLogYSoftDelete.ts`
-
-**Archivo De Explicación**: `1700000002001-AuditLogYSoftDelete.explicacion.md`
-
-#### Objetivo
-Implementar auditoría de cambios de suscripciones y soft delete en usuarios.
-
-#### Cambios Principales
-
-**1) Crear tabla subscriptions_logs**
-```sql
-CREATE TABLE subscriptions_logs (
-  id, subscription_id (FK), price_monthly, currency, plan_name, status, created_at...
-)
-```
-- Guarda snapshot de precio/moneda en cada cambio
-- Permite auditar cambios históricos sin perder precisión
-- Evita inconsistencias al cambiar planes de precio
-
-**2) Soft Delete en USERS**
-```sql
-ALTER TABLE users ADD COLUMN deleted_at datetime(6) NULL
-ALTER TABLE users ADD COLUMN status varchar(50) NOT NULL DEFAULT 'ACTIVE'
-ALTER TABLE users ADD INDEX (deleted_at)
-ALTER TABLE users ADD INDEX (deleted_at, status)
-```
-- Marca usuarios como eliminados sin borrar datos
-- Permite recuperar usuarios si es necesario
-- Índices para filtros rápidos (usuarios activos, histórico de eliminados)
-
-#### Beneficios
-- ✅ Auditoría completa de cambios en suscripciones
-- ✅ Datos de usuario recuperables
-- ✅ Cumple con RGPD (posibilidad de restaurar antes de eliminación definitiva)
-- ✅ Performance: índices optimizados
-
-#### Reversión (down)
-- Elimina campos soft delete
-- Elimina tabla subscriptions_logs
-
-
----
-
-### Migración 006: CrearTablaRoles
-
-**Archivo**: `backend/src/database/migrations/1700000005001-CrearTablaRoles.ts`
-
-**Archivo De Explicación**: `1700000005001-CrearTablaRoles.explicacion.md`
-
-#### Objetivo
-Reemplazar el enum `role` en USERS por una tabla `roles` separada para mayor escalabilidad.
-
-#### Cambios Principales
-
-**1) Crear tabla roles**
-```sql
-CREATE TABLE roles (
-  id, code (ADMIN/INSTRUCTOR/STUDENT), name, description, created_at, updated_at...
-)
-```
-- Estructura normalizada
-- Permite agregar campos futuros (permissions, etc)
-- Índice en code para búsquedas rápidas
-
-**2) Insertar roles estándar**
-- ADMIN: Acceso total
-- INSTRUCTOR: Crear y gestionar cursos
-- STUDENT: Acceso a contenido
-
-**3) Migrar datos de users**
-```sql
-ALTER TABLE users ADD COLUMN role_id int NOT NULL DEFAULT 3
-UPDATE users u JOIN roles r ON (CASE WHEN u.role='ADMIN' THEN r.code='ADMIN'...)
-ALTER TABLE users ADD CONSTRAINT FK_users_role_id FOREIGN KEY (role_id)...
-ALTER TABLE users DROP COLUMN role
-```
-- Conserva mapeo 1:1 de valores enum
-- Sin pérdida de datos
-- FK garantiza integridad referencial
-
-#### Ventajas vs Enum
-| Aspecto | Enum | Tabla roles |
-|---------|------|------------|
-| Agregar roles | ❌ ALTER COLUMN | ✅ INSERT simple |
-| Permisos | ❌ No | ✅ Puede expandir |
-| Auditoría | ❌ No | ✅ created_at/updated_at |
-| FK integrity | ❌ No | ✅ ON DELETE RESTRICT |
-| Cambios futuros | ❌ Migration | ✅ Solo datos |
-
-#### Reversión (down)
-- Elimina FK
-- Restaura columna role enum
-- Migra datos inversos
-- Elimina tabla roles
-- Sin pérdida de datos
+#### Nota de alcance
+- En esta iteración **NO** quedó activa la migración de tabla `roles`.
+- Se mantuvo `users.role` como enum por decisión de estabilidad.
 
 
 ---
@@ -926,7 +755,7 @@ WHERE c.visibility='PUBLIC' AND c.modality='SELF_PACED' AND c.tier_required=?...
 
 ## Resumen General
 
-✅ **Migraciones Completadas**: 6/6 (Hardening, Validaciones, Placeholder, Auditoría, Roles)
+✅ **Migraciones Completadas**: 2/2 activas (InitialSchema + InitialMigration)
 
 ✅ **Integridad de Datos**: Hardened con NOT NULL + UNIQUE + CHECK constraints
 
@@ -934,7 +763,7 @@ WHERE c.visibility='PUBLIC' AND c.modality='SELF_PACED' AND c.tier_required=?...
 
 ✅ **Auditoría**: Tabla subscriptions_logs para historial de precios
 
-✅ **Escalabilidad**: Tabla roles separada (evolutiva vs enum fijo)
+✅ **Estabilidad de Roles**: Se mantiene enum en users.role (sin tabla roles activa)
 
 ⏳ **Próximos Pasos**:
 - Crear índices de performance según consultas críticas

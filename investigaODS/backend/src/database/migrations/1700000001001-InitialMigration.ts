@@ -3,14 +3,13 @@ import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 /**
  * InitialMigration: Consolidación TOTAL de todas las migraciones en una sola
  *
- * Este archivo contiene todas las 9 fases de migración de la base de datos:
+ * Este archivo contiene todas las 8 fases de migración de la base de datos:
  * - FASE 1-5: Hardening inicial (limpieza, deduplicación, normalización, FK, UNIQUE)
  * - FASE 6: Validaciones de rango y fechas
  * - FASE 7: Estandarización de naming (placeholder)
  * - FASE 8: Auditoría y soft delete
- * - FASE 9: Tabla de roles
  *
- * Estructura: 9 fases principales, cada una independiente pero secuencial
+ * Estructura: 8 fases principales, cada una independiente pero secuencial
  * Reversión: LIFO (Last In, First Out)
  */
 export class InitialHardeningWeek121700000001001 implements MigrationInterface {
@@ -248,12 +247,59 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
     // ============================================================================
     console.log('[MIGRACION] FASE 5: Agregando restricciones UNIQUE...');
 
-    await queryRunner.query(`ALTER TABLE courses ADD UNIQUE INDEX UQ_courses_slug (slug)`);
-    await queryRunner.query(`ALTER TABLE enrollments ADD UNIQUE INDEX UQ_enrollments_user_course (user_id, course_id)`);
-    await queryRunner.query(`ALTER TABLE lesson_progress ADD UNIQUE INDEX UQ_lesson_progress_user_lesson (user_id, lesson_id)`);
-    await queryRunner.query(`ALTER TABLE user_points ADD UNIQUE INDEX UQ_user_points_user_course (user_id, course_id)`);
-    await queryRunner.query('ALTER TABLE course_modules ADD UNIQUE INDEX UQ_course_modules_course_index (course_id, `index`)');
-    await queryRunner.query('ALTER TABLE lessons ADD UNIQUE INDEX UQ_lessons_module_index (module_id, `index`)');
+    const uqCoursesSlugExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses' AND INDEX_NAME = 'UQ_courses_slug'
+      LIMIT 1
+    `);
+    if (uqCoursesSlugExists.length === 0) {
+      await queryRunner.query(`ALTER TABLE courses ADD UNIQUE INDEX UQ_courses_slug (slug)`);
+    }
+
+    const uqEnrollmentsExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'enrollments' AND INDEX_NAME = 'UQ_enrollments_user_course'
+      LIMIT 1
+    `);
+    if (uqEnrollmentsExists.length === 0) {
+      await queryRunner.query(`ALTER TABLE enrollments ADD UNIQUE INDEX UQ_enrollments_user_course (user_id, course_id)`);
+    }
+
+    const uqLessonProgressExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'lesson_progress' AND INDEX_NAME = 'UQ_lesson_progress_user_lesson'
+      LIMIT 1
+    `);
+    if (uqLessonProgressExists.length === 0) {
+      await queryRunner.query(`ALTER TABLE lesson_progress ADD UNIQUE INDEX UQ_lesson_progress_user_lesson (user_id, lesson_id)`);
+    }
+
+    const uqUserPointsExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_points' AND INDEX_NAME = 'UQ_user_points_user_course'
+      LIMIT 1
+    `);
+    if (uqUserPointsExists.length === 0) {
+      await queryRunner.query(`ALTER TABLE user_points ADD UNIQUE INDEX UQ_user_points_user_course (user_id, course_id)`);
+    }
+
+    const uqCourseModulesExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'course_modules' AND INDEX_NAME = 'UQ_course_modules_course_index'
+      LIMIT 1
+    `);
+    if (uqCourseModulesExists.length === 0) {
+      await queryRunner.query('ALTER TABLE course_modules ADD UNIQUE INDEX UQ_course_modules_course_index (course_id, `index`)');
+    }
+
+    const uqLessonsExists = await queryRunner.query(`
+      SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'lessons' AND INDEX_NAME = 'UQ_lessons_module_index'
+      LIMIT 1
+    `);
+    if (uqLessonsExists.length === 0) {
+      await queryRunner.query('ALTER TABLE lessons ADD UNIQUE INDEX UQ_lessons_module_index (module_id, `index`)');
+    }
 
     console.log('[MIGRACION] FASE 5: Restricciones UNIQUE agregadas ✓');
 
@@ -275,10 +321,21 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
       WHERE progress_pct > 100
     `);
 
-    await queryRunner.query(`
-      ALTER TABLE lesson_progress
-      ADD CONSTRAINT chk_progress_pct_range CHECK (progress_pct >= 0 AND progress_pct <= 100)
+    const chkProgressPctExists = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+      WHERE CONSTRAINT_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'lesson_progress'
+        AND CONSTRAINT_NAME = 'chk_progress_pct_range'
+        AND CONSTRAINT_TYPE = 'CHECK'
+      LIMIT 1
     `);
+    if (chkProgressPctExists.length === 0) {
+      await queryRunner.query(`
+        ALTER TABLE lesson_progress
+        ADD CONSTRAINT chk_progress_pct_range CHECK (progress_pct >= 0 AND progress_pct <= 100)
+      `);
+    }
 
     console.log('[MIGRACION] FASE 6.2: Validar end_at > start_at en live_classes...');
     await queryRunner.query(`
@@ -290,10 +347,21 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
       ALTER TABLE live_classes MODIFY end_at datetime NOT NULL
     `);
 
-    await queryRunner.query(`
-      ALTER TABLE live_classes
-      ADD CONSTRAINT chk_live_classes_dates CHECK (end_at > start_at)
+    const chkLiveClassesExists = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+      WHERE CONSTRAINT_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'live_classes'
+        AND CONSTRAINT_NAME = 'chk_live_classes_dates'
+        AND CONSTRAINT_TYPE = 'CHECK'
+      LIMIT 1
     `);
+    if (chkLiveClassesExists.length === 0) {
+      await queryRunner.query(`
+        ALTER TABLE live_classes
+        ADD CONSTRAINT chk_live_classes_dates CHECK (end_at > start_at)
+      `);
+    }
 
     console.log('[MIGRACION] FASE 6.3: Validar end_at > start_at en cohorts...');
     await queryRunner.query(`
@@ -301,10 +369,21 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
       WHERE end_at IS NOT NULL AND end_at <= start_at
     `);
 
-    await queryRunner.query(`
-      ALTER TABLE cohorts
-      ADD CONSTRAINT chk_cohorts_dates CHECK (end_at IS NULL OR end_at > start_at)
+    const chkCohortsExists = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+      WHERE CONSTRAINT_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'cohorts'
+        AND CONSTRAINT_NAME = 'chk_cohorts_dates'
+        AND CONSTRAINT_TYPE = 'CHECK'
+      LIMIT 1
     `);
+    if (chkCohortsExists.length === 0) {
+      await queryRunner.query(`
+        ALTER TABLE cohorts
+        ADD CONSTRAINT chk_cohorts_dates CHECK (end_at IS NULL OR end_at > start_at)
+      `);
+    }
 
     console.log('[MIGRACION] FASE 6.4: Limpiar capacidades inválidas...');
     await queryRunner.query(`
@@ -334,198 +413,170 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
     console.log('[MIGRACION] FASE 8: Agregando auditoría y soft delete...');
 
     console.log('[MIGRACION] FASE 8.1: Crear tabla subscriptions_logs...');
-    await queryRunner.createTable(
-      new Table({
-        name: 'subscriptions_logs',
-        columns: [
-          {
-            name: 'id',
-            type: 'int',
-            isPrimary: true,
-            isGenerated: true,
-            generationStrategy: 'increment',
-          },
-          {
-            name: 'created_at',
-            type: 'datetime',
-            precision: 6,
-            default: 'CURRENT_TIMESTAMP(6)',
-          },
-          {
-            name: 'subscription_id',
-            type: 'int',
-            isNullable: false,
-          },
-          {
-            name: 'price_monthly',
-            type: 'decimal',
-            precision: 10,
-            scale: 2,
-            isNullable: true,
-          },
-          {
-            name: 'currency',
-            type: 'varchar',
-            length: '3',
-            isNullable: true,
-            default: "'USD'",
-          },
-          {
-            name: 'plan_name',
-            type: 'varchar',
-            length: '255',
-            isNullable: true,
-          },
-          {
-            name: 'status',
-            type: 'enum',
-            enum: ['ACTIVE', 'CANCELLED', 'EXPIRED'],
-            isNullable: false,
-          },
-        ],
-        foreignKeys: [
-          {
-            columnNames: ['subscription_id'],
-            referencedTableName: 'subscriptions',
-            referencedColumnNames: ['id'],
-            onDelete: 'CASCADE',
-          },
-        ],
-        indices: [
-          {
-            columnNames: ['subscription_id'],
-          },
-          {
-            columnNames: ['created_at'],
-          },
-        ],
-      }),
-    );
+    const hasSubscriptionsLogs = await queryRunner.hasTable('subscriptions_logs');
+    if (!hasSubscriptionsLogs) {
+      await queryRunner.createTable(
+        new Table({
+          name: 'subscriptions_logs',
+          columns: [
+            {
+              name: 'id',
+              type: 'int',
+              isPrimary: true,
+              isGenerated: true,
+              generationStrategy: 'increment',
+            },
+            {
+              name: 'created_at',
+              type: 'datetime',
+              precision: 6,
+              default: 'CURRENT_TIMESTAMP(6)',
+            },
+            {
+              name: 'subscription_id',
+              type: 'int',
+              isNullable: false,
+            },
+            {
+              name: 'price_monthly',
+              type: 'decimal',
+              precision: 10,
+              scale: 2,
+              isNullable: true,
+            },
+            {
+              name: 'currency',
+              type: 'varchar',
+              length: '3',
+              isNullable: true,
+              default: "'USD'",
+            },
+            {
+              name: 'plan_name',
+              type: 'varchar',
+              length: '255',
+              isNullable: true,
+            },
+            {
+              name: 'status',
+              type: 'enum',
+              enum: ['ACTIVE', 'CANCELLED', 'EXPIRED'],
+              isNullable: false,
+            },
+          ],
+          foreignKeys: [
+            {
+              columnNames: ['subscription_id'],
+              referencedTableName: 'subscriptions',
+              referencedColumnNames: ['id'],
+              onDelete: 'CASCADE',
+            },
+          ],
+          indices: [
+            {
+              columnNames: ['subscription_id'],
+            },
+            {
+              columnNames: ['created_at'],
+            },
+          ],
+        }),
+      );
+    }
 
     console.log('[MIGRACION] FASE 8.2: Agregar soft delete a users...');
-    await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN deleted_at datetime(6) NULL AFTER updated_at`,
-    );
+    const hasDeletedAt = await queryRunner.hasColumn('users', 'deleted_at');
+    if (!hasDeletedAt) {
+      await queryRunner.query(
+        `ALTER TABLE users ADD COLUMN deleted_at datetime(6) NULL AFTER updated_at`,
+      );
+    }
 
-    await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN status varchar(50) NOT NULL DEFAULT 'ACTIVE' AFTER deleted_at`,
-    );
+    const hasStatus = await queryRunner.hasColumn('users', 'status');
+    if (!hasStatus) {
+      await queryRunner.query(
+        `ALTER TABLE users ADD COLUMN status varchar(50) NOT NULL DEFAULT 'ACTIVE' AFTER deleted_at`,
+      );
+    }
 
-    await queryRunner.query(
-      `ALTER TABLE users ADD INDEX idx_users_deleted_at (deleted_at)`,
-    );
+    const hasDeletedAtIndexResult = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND INDEX_NAME = 'idx_users_deleted_at'
+      LIMIT 1
+    `);
+    const hasDeletedAtIndex = hasDeletedAtIndexResult.length > 0;
+    if (!hasDeletedAtIndex) {
+      await queryRunner.query(
+        `ALTER TABLE users ADD INDEX idx_users_deleted_at (deleted_at)`,
+      );
+    }
 
-    await queryRunner.query(
-      `ALTER TABLE users ADD INDEX idx_users_active (deleted_at, status)`,
-    );
+    const hasActiveIndexResult = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND INDEX_NAME = 'idx_users_active'
+      LIMIT 1
+    `);
+    const hasActiveIndex = hasActiveIndexResult.length > 0;
+    if (!hasActiveIndex) {
+      await queryRunner.query(
+        `ALTER TABLE users ADD INDEX idx_users_active (deleted_at, status)`,
+      );
+    }
 
     console.log('[MIGRACION] FASE 8: Auditoría y soft delete completados ✓');
 
-    // ============================================================================
-    // FASE 9: TABLA DE ROLES
-    // ============================================================================
-    console.log('[MIGRACION] FASE 9: Creando tabla de roles...');
-
-    console.log('[MIGRACION] FASE 9.1: Crear tabla roles...');
-    await queryRunner.query(`
-      CREATE TABLE \`roles\` (
-        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        \`code\` varchar(50) NOT NULL UNIQUE,
-        \`name\` varchar(255) NOT NULL,
-        \`description\` text,
-        \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-        \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-        INDEX \`idx_roles_code\` (\`code\`)
-      ) ENGINE=InnoDB
-    `);
-
-    console.log('[MIGRACION] FASE 9.2: Insertar roles iniciales...');
-    await queryRunner.query(`
-      INSERT INTO \`roles\` (\`code\`, \`name\`, \`description\`) VALUES
-      ('ADMIN', 'Administrador', 'Acceso total al sistema, gestión de usuarios y configuración'),
-      ('INSTRUCTOR', 'Instructor', 'Crear y gestionar cursos, lecciones y evaluaciones'),
-      ('STUDENT', 'Estudiante', 'Acceso a cursos, lecciones e intentos de evaluaciones')
-    `);
-
-    console.log('[MIGRACION] FASE 9.3: Migrar role enum a role_id FK...');
-    await queryRunner.query(`
-      ALTER TABLE \`users\` 
-      ADD COLUMN \`role_id\` int NOT NULL DEFAULT 3 AFTER \`role\`
-    `);
-
-    await queryRunner.query(`
-      UPDATE \`users\` u
-      JOIN \`roles\` r ON (
-        CASE 
-          WHEN u.\`role\` = 'ADMIN' THEN r.\`code\` = 'ADMIN'
-          WHEN u.\`role\` = 'INSTRUCTOR' THEN r.\`code\` = 'INSTRUCTOR'
-          WHEN u.\`role\` = 'STUDENT' THEN r.\`code\` = 'STUDENT'
-        END
-      )
-      SET u.\`role_id\` = r.\`id\`
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      ADD CONSTRAINT \`FK_users_role_id\` 
-      FOREIGN KEY (\`role_id\`) REFERENCES \`roles\`(\`id\`) ON DELETE RESTRICT
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      ADD INDEX \`idx_users_role_id\` (\`role_id\`)
-    `);
-
-    console.log('[MIGRACION] FASE 9.4: Eliminar columna role enum...');
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      DROP COLUMN \`role\`
-    `);
-
-    console.log('[MIGRACION] FASE 9: Tabla de roles completada ✓');
-
-    console.log('[MIGRACION] ✅ MIGRACIÓN COMPLETADA EXITOSAMENTE - TODAS LAS 9 FASES EJECUTADAS');
+    console.log('[MIGRACION] ✅ MIGRACIÓN COMPLETADA EXITOSAMENTE - TODAS LAS 8 FASES EJECUTADAS');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     console.log('[MIGRACION] Iniciando REVERSIÓN de cambios...');
 
     // ========================================
-    // FASE 9 REVERT: Tabla de roles
-    // ========================================
-    console.log('[REVERSIÓN] FASE 9: Revirtiendo tabla de roles...');
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      DROP FOREIGN KEY \`FK_users_role_id\`
-    `);
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      DROP INDEX \`idx_users_role_id\`
-    `);
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      ADD COLUMN \`role\` enum('ADMIN','INSTRUCTOR','STUDENT') NOT NULL DEFAULT 'STUDENT' AFTER \`avatar_url\`
-    `);
-    await queryRunner.query(`
-      UPDATE \`users\` u
-      JOIN \`roles\` r ON u.\`role_id\` = r.\`id\`
-      SET u.\`role\` = r.\`code\`
-    `);
-    await queryRunner.query(`
-      ALTER TABLE \`users\`
-      DROP COLUMN \`role_id\`
-    `);
-    await queryRunner.dropTable('roles');
-
-    // ========================================
     // FASE 8 REVERT: Auditoría y soft delete
     // ========================================
     console.log('[REVERSIÓN] FASE 8: Revirtiendo auditoría y soft delete...');
-    await queryRunner.query(`ALTER TABLE users DROP INDEX idx_users_active`);
-    await queryRunner.query(`ALTER TABLE users DROP INDEX idx_users_deleted_at`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN status`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN deleted_at`);
-    await queryRunner.dropTable('subscriptions_logs');
+    const hasUsersActiveIndexResult = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND INDEX_NAME = 'idx_users_active'
+      LIMIT 1
+    `);
+    const hasUsersActiveIndex = hasUsersActiveIndexResult.length > 0;
+    if (hasUsersActiveIndex) {
+      await queryRunner.query(`ALTER TABLE users DROP INDEX idx_users_active`);
+    }
+    const hasUsersDeletedAtIndexResult = await queryRunner.query(`
+      SELECT 1
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND INDEX_NAME = 'idx_users_deleted_at'
+      LIMIT 1
+    `);
+    const hasUsersDeletedAtIndex = hasUsersDeletedAtIndexResult.length > 0;
+    if (hasUsersDeletedAtIndex) {
+      await queryRunner.query(`ALTER TABLE users DROP INDEX idx_users_deleted_at`);
+    }
+    const hasUsersStatus = await queryRunner.hasColumn('users', 'status');
+    if (hasUsersStatus) {
+      await queryRunner.query(`ALTER TABLE users DROP COLUMN status`);
+    }
+    const hasUsersDeletedAt = await queryRunner.hasColumn('users', 'deleted_at');
+    if (hasUsersDeletedAt) {
+      await queryRunner.query(`ALTER TABLE users DROP COLUMN deleted_at`);
+    }
+    const hasSubscriptionsLogsDown = await queryRunner.hasTable('subscriptions_logs');
+    if (hasSubscriptionsLogsDown) {
+      await queryRunner.dropTable('subscriptions_logs');
+    }
 
     // ========================================
     // FASE 7 REVERT: Estandarización (no-op)
@@ -545,18 +596,7 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
     `);
 
     // ========================================
-    // FASE 5 REVERT: UNIQUE constraints
-    // ========================================
-    console.log('[REVERSIÓN] FASE 5: Revirtiendo UNIQUE constraints...');
-    await queryRunner.query(`ALTER TABLE lessons DROP INDEX UQ_lessons_module_index`);
-    await queryRunner.query(`ALTER TABLE course_modules DROP INDEX UQ_course_modules_course_index`);
-    await queryRunner.query(`ALTER TABLE user_points DROP INDEX UQ_user_points_user_course`);
-    await queryRunner.query(`ALTER TABLE lesson_progress DROP INDEX UQ_lesson_progress_user_lesson`);
-    await queryRunner.query(`ALTER TABLE enrollments DROP INDEX UQ_enrollments_user_course`);
-    await queryRunner.query(`ALTER TABLE courses DROP INDEX UQ_courses_slug`);
-
-    // ========================================
-    // FASE 4 REVERT: Hardening FKs
+    // FASE 4 REVERT: Hardening FKs (BEFORE FASE 5!)
     // ========================================
     console.log('[REVERSIÓN] FASE 4: Revirtiendo hardening de FKs...');
     await queryRunner.query(`ALTER TABLE lessons DROP FOREIGN KEY FK_35fb2307535d90a6ed290af1f4a`);
@@ -568,6 +608,18 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE user_points DROP FOREIGN KEY FK_b63a87a96091c755b78a75eecbc`);
     await queryRunner.query(`ALTER TABLE user_points DROP FOREIGN KEY FK_44f02f2ff7d0ae4bd9be9cd24cf`);
 
+    // ========================================
+    // FASE 5 REVERT: UNIQUE constraints
+    // ========================================
+    console.log('[REVERSIÓN] FASE 5: Revirtiendo UNIQUE constraints...');
+    await queryRunner.query(`ALTER TABLE lessons DROP INDEX UQ_lessons_module_index`);
+    await queryRunner.query(`ALTER TABLE course_modules DROP INDEX UQ_course_modules_course_index`);
+    await queryRunner.query(`ALTER TABLE user_points DROP INDEX UQ_user_points_user_course`);
+    await queryRunner.query(`ALTER TABLE lesson_progress DROP INDEX UQ_lesson_progress_user_lesson`);
+    await queryRunner.query(`ALTER TABLE enrollments DROP INDEX UQ_enrollments_user_course`);
+    await queryRunner.query(`ALTER TABLE courses DROP INDEX UQ_courses_slug`);
+
+    // Re-modify columns to NULL and re-add FKs in their original state
     await queryRunner.query(`ALTER TABLE subscriptions MODIFY user_id int NULL`);
     await queryRunner.query(`ALTER TABLE subscriptions MODIFY plan_id int NULL`);
     await queryRunner.query(`ALTER TABLE courses MODIFY owner_id int NULL`);
