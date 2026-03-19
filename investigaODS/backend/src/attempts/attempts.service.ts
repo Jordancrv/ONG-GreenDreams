@@ -117,7 +117,8 @@ export class AttemptsService {
     if (!attempt) {
       throw new NotFoundException('Attempt not found');
     }
-    if (attempt.user.id !== user.id && user.role !== UserRole.ADMIN) {
+    const roleCode = this.getRoleCode(user);
+    if (attempt.user.id !== user.id && roleCode !== UserRole.ADMIN) {
       throw new ForbiddenException('Not allowed to access attempt');
     }
     return attempt;
@@ -129,5 +130,13 @@ export class AttemptsService {
       attempt.user = user;
     }
     return attempt;
+  }
+
+  private getRoleCode(user: User): UserRole | undefined {
+    const roleValue = (user as any).role;
+    if (typeof roleValue === 'string') {
+      return roleValue as UserRole;
+    }
+    return roleValue?.code ?? (user as any).roleCode;
   }
 }

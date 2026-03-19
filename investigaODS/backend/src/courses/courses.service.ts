@@ -263,10 +263,11 @@ export class CoursesService {
   }
 
   assertCanManageCourse(course: Course, user: User) {
-    if (user.role === UserRole.ADMIN) {
+    const roleCode = this.getRoleCode(user);
+    if (roleCode === UserRole.ADMIN) {
       return;
     }
-    if (user.role === UserRole.INSTRUCTOR && course.owner.id === user.id) {
+    if (roleCode === UserRole.INSTRUCTOR && course.owner.id === user.id) {
       return;
     }
     throw new ForbiddenException('Not allowed to manage this course');
@@ -311,5 +312,13 @@ export class CoursesService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
       .substring(0, 100);
+  }
+
+  private getRoleCode(user: User): UserRole | undefined {
+    const roleValue = (user as any).role;
+    if (typeof roleValue === 'string') {
+      return roleValue as UserRole;
+    }
+    return roleValue?.code ?? (user as any).roleCode;
   }
 }

@@ -51,10 +51,11 @@ export class EnrollmentsService {
   }
 
   private ensureInstructorAccess(ownerId: number, user: User) {
-    if (user.role === UserRole.ADMIN) {
+    const roleCode = this.getRoleCode(user);
+    if (roleCode === UserRole.ADMIN) {
       return;
     }
-    if (user.role === UserRole.INSTRUCTOR && user.id === ownerId) {
+    if (roleCode === UserRole.INSTRUCTOR && user.id === ownerId) {
       return;
     }
     throw new ForbiddenException('Not allowed');
@@ -78,5 +79,13 @@ export class EnrollmentsService {
       enrollment.course.owner = owner;
     }
     return enrollment;
+  }
+
+  private getRoleCode(user: User): UserRole | undefined {
+    const roleValue = (user as any).role;
+    if (typeof roleValue === 'string') {
+      return roleValue as UserRole;
+    }
+    return roleValue?.code ?? (user as any).roleCode;
   }
 }

@@ -25,9 +25,10 @@ export class PlansGuard implements CanActivate {
     if (!user) {
       throw new ForbiddenException('Authentication required');
     }
+    const userRoleCode = typeof user.role === 'string' ? user.role : user.role?.code;
     
     // Instructores y Administradores tienen acceso completo sin restricciones de plan
-    if (user.role === UserRole.INSTRUCTOR || user.role === UserRole.ADMIN) {
+    if (userRoleCode === UserRole.INSTRUCTOR || userRoleCode === UserRole.ADMIN) {
       return true;
     }
     const subscription = await this.subscriptionsService.findActiveSubscription(user.id);

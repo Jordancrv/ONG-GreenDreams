@@ -22,14 +22,23 @@ export class AdminController {
   @Get('users')
   async listUsers() {
     const users = await this.usersService.findAll();
-    return users.map(({ passwordHash, ...rest }) => rest);
+    return users.map((user) => {
+      const { passwordHash, role, ...rest } = user as any;
+      return {
+        ...rest,
+        role: role?.code ?? user.roleCode,
+      };
+    });
   }
 
   @Patch('users/:id')
   async updateUser(@Param('id') id: number, @Body() dto: UpdateUserDto) {
     const updated = await this.usersService.update(Number(id), dto);
-    const { passwordHash, ...rest } = updated;
-    return rest;
+    const { passwordHash, role, ...rest } = updated as any;
+    return {
+      ...rest,
+      role: role?.code ?? updated.roleCode,
+    };
   }
 
   @Get('courses')

@@ -19,15 +19,21 @@ export class UsersController {
     if (!found) {
       return null;
     }
-    const { passwordHash, ...rest } = found;
-    return rest;
+    const { passwordHash, role, ...rest } = found as any;
+    return {
+      ...rest,
+      role: role?.code ?? found.roleCode,
+    };
   }
 
   @Patch('me')
   async updateProfile(@CurrentUser() user: User, @Body() dto: UpdateUserDto) {
     const { role, ...restDto } = dto;
     const updated = await this.usersService.update(user.id, restDto);
-    const { passwordHash, ...rest } = updated;
-    return rest;
+    const { passwordHash, role: updatedRole, ...rest } = updated as any;
+    return {
+      ...rest,
+      role: updatedRole?.code ?? updated.roleCode,
+    };
   }
 }

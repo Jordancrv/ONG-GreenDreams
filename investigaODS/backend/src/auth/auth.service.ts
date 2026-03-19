@@ -91,12 +91,15 @@ export class AuthService {
   }
 
   stripPassword(user: User) {
-    const { passwordHash, ...rest } = user;
-    return rest;
+    const { passwordHash, role, ...rest } = user as any;
+    return {
+      ...rest,
+      role: role?.code ?? user.roleCode,
+    };
   }
 
   private async generateTokens(user: User): Promise<TokenBundle> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.roleCode };
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES', '15m'),

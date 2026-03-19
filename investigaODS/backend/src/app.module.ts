@@ -24,6 +24,7 @@ import { ChallengesModule } from './challenges/challenges.module';
 import { HealthModule } from './health/health.module';
 import { TagsModule } from './tags/tags.module';
 import { FavoritesModule } from './favorites/favorites.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     HealthModule,
     TagsModule,
     FavoritesModule,
+    RolesModule,
   ],
   providers: [
     {

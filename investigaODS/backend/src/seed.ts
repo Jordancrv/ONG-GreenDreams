@@ -5,6 +5,7 @@ import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { MembershipPlan, MembershipPlanCode } from './plans/membership-plan.entity';
 import { User } from './users/user.entity';
 import { UserRole } from './users/user-role.enum';
+import { Role } from './roles/role.entity';
 import { Subscription, SubscriptionStatus } from './subscriptions/subscription.entity';
 import { Course, CourseModality, CourseTier, CourseVisibility } from './courses/course.entity';
 import { CourseModule } from './courses/course-module.entity';
@@ -39,6 +40,7 @@ async function seed() {
   await dataSource.initialize();
   const planRepo = dataSource.getRepository(MembershipPlan);
   const userRepo = dataSource.getRepository(User);
+  const roleRepo = dataSource.getRepository(Role);
   const subscriptionRepo = dataSource.getRepository(Subscription);
   const courseRepo = dataSource.getRepository(Course);
   const moduleRepo = dataSource.getRepository(CourseModule);
@@ -61,6 +63,19 @@ async function seed() {
     BASIC: await planRepo.findOne({ where: { code: MembershipPlanCode.BASIC } }),
     PRO: await planRepo.findOne({ where: { code: MembershipPlanCode.PRO } }),
   };
+
+  const roleSeed = [
+    { code: UserRole.STUDENT, name: 'Student' },
+    { code: UserRole.INSTRUCTOR, name: 'Instructor' },
+    { code: UserRole.ADMIN, name: 'Admin' },
+  ];
+
+  for (const roleRow of roleSeed) {
+    const existingRole = await roleRepo.findOne({ where: { code: roleRow.code } });
+    if (!existingRole) {
+      await roleRepo.save(roleRepo.create(roleRow));
+    }
+  }
 
   const seedUsers: SeedUserInput[] = [
     {
@@ -98,15 +113,23 @@ async function seed() {
   ];
 
   for (const seedUser of seedUsers) {
-    let user = await userRepo.findOne({ where: { email: seedUser.email } });
+    let user = await userRepo.findOne({ where: { email: seedUser.email }, relations: ['role'] });
+    const role = await roleRepo.findOne({ where: { code: seedUser.role } });
+    if (!role) {
+      continue;
+    }
+
     if (!user) {
       user = userRepo.create({
         email: seedUser.email,
         passwordHash: await bcrypt.hash(seedUser.password, 10),
-        role: seedUser.role,
+        role,
         firstName: seedUser.firstName,
         lastName: seedUser.lastName,
       });
+      user = await userRepo.save(user);
+    } else if (user.role?.code !== role.code) {
+      user.role = role;
       user = await userRepo.save(user);
     }
 
