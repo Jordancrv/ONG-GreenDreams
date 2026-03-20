@@ -40,6 +40,70 @@ type PerfConfig = {
   auditLogs: number;
 };
 
+const SPANISH_TAGS = [
+  'Reciclaje',
+  'Compostaje',
+  'Huerto urbano',
+  'Cambio climatico',
+  'Energia solar',
+  'Economia circular',
+  'Consumo responsable',
+  'Educacion ambiental',
+  'Biodiversidad',
+  'Reforestacion',
+  'Agricultura sostenible',
+  'Gestion de residuos',
+  'Agua y saneamiento',
+  'Calidad del aire',
+  'Movilidad sostenible',
+  'Emprendimiento verde',
+  'Recuperacion de suelos',
+  'Ecoinnovacion',
+  'Alimentacion sostenible',
+  'Voluntariado ambiental',
+  'Permacultura',
+  'Eficiencia energetica',
+  'Turismo sostenible',
+  'Liderazgo comunitario',
+  'Economia social',
+  'Circularidad textil',
+  'Cultura ambiental',
+  'Reciclaje electronico',
+  'Tecnologia para impacto',
+  'Gestion de proyectos verdes',
+];
+
+const COURSE_TOPICS = [
+  'Reciclaje en el hogar',
+  'Compostaje comunitario',
+  'Huertos escolares',
+  'Introduccion a energia solar',
+  'Gestion de residuos urbanos',
+  'Economia circular aplicada',
+  'Consumo responsable diario',
+  'Educacion ambiental para docentes',
+  'Proteccion de biodiversidad local',
+  'Reforestacion y viveros',
+  'Agricultura urbana sostenible',
+  'Movilidad sostenible en ciudades',
+  'Liderazgo para proyectos ambientales',
+  'Emprendimientos verdes desde cero',
+  'Eficiencia energetica en edificios',
+  'Alimentacion sostenible y saludable',
+];
+
+function buildTagLabel(index: number): string {
+  const base = SPANISH_TAGS[index % SPANISH_TAGS.length];
+  const cycle = Math.floor(index / SPANISH_TAGS.length) + 1;
+  return cycle === 1 ? base : `${base} ${cycle}`;
+}
+
+function buildCourseTitle(index: number): string {
+  const topic = COURSE_TOPICS[(index - 1) % COURSE_TOPICS.length];
+  const level = (index % 3) + 1;
+  return `${topic} - Nivel ${level}`;
+}
+
 function envInt(name: string, defaultValue: number): number {
   const raw = process.env[name];
   if (!raw) {
@@ -59,7 +123,7 @@ function loadConfig(): PerfConfig {
     instructors: envInt('PERF_INSTRUCTORS', 25),
     students: envInt('PERF_STUDENTS', 1200),
     courses: envInt('PERF_COURSES', 350),
-    tags: envInt('PERF_TAGS', 60),
+    tags: envInt('PERF_TAGS', 90),
     modulesPerCourse: envInt('PERF_MODULES_PER_COURSE', 4),
     lessonsPerModule: envInt('PERF_LESSONS_PER_MODULE', 6),
     enrollmentsPerStudent: envInt('PERF_ENROLLMENTS_PER_STUDENT', 8),
@@ -195,10 +259,10 @@ async function run(): Promise<void> {
   for (let i = 1; i <= cfg.instructors; i += 1) {
     instructorsToCreate.push(
       userRepo.create({
-        email: `perf.${cfg.runId}.instructor.${i}@test.com`,
+        email: `docente.${cfg.runId}.${i}@test.com`,
         passwordHash,
-        firstName: 'Perf',
-        lastName: `Instructor ${i}`,
+        firstName: 'Docente',
+        lastName: `Ambiental ${i}`,
         role: roles[UserRole.INSTRUCTOR],
         status: 'ACTIVE',
       }),
@@ -209,10 +273,10 @@ async function run(): Promise<void> {
   for (let i = 1; i <= cfg.students; i += 1) {
     studentsToCreate.push(
       userRepo.create({
-        email: `perf.${cfg.runId}.student.${i}@test.com`,
+        email: `estudiante.${cfg.runId}.${i}@test.com`,
         passwordHash,
-        firstName: 'Perf',
-        lastName: `Student ${i}`,
+        firstName: 'Estudiante',
+        lastName: `Demo ${i}`,
         role: roles[UserRole.STUDENT],
         status: 'ACTIVE',
       }),
@@ -238,7 +302,8 @@ async function run(): Promise<void> {
 
   const tagsToCreate: Tag[] = [];
   for (let i = 1; i <= cfg.tags; i += 1) {
-    tagsToCreate.push(tagRepo.create({ name: `perf-${cfg.runId}-tag-${i}` }));
+    const label = buildTagLabel(i - 1);
+    tagsToCreate.push(tagRepo.create({ name: `${label} demo ${cfg.runId.slice(-4)}` }));
   }
   const tags = await saveInChunks(tagRepo, tagsToCreate, 200);
 
@@ -251,10 +316,11 @@ async function run(): Promise<void> {
     coursesToCreate.push(
       courseRepo.create({
         owner,
-        title: `Performance Course ${i}`,
+        title: buildCourseTitle(i),
         slug: courseSlug(cfg.runId, i),
-        summary: `Synthetic course ${i} for performance testing`,
-        description: `This is synthetic data for performance validation. Course ${i}`,
+        summary: `Curso de prueba ${i} para validar filtros y rendimiento del catalogo`,
+        description:
+          `Contenido de ejemplo en espanol para pruebas funcionales del entorno. Curso ${i}.`,
         visibility: CourseVisibility.PUBLIC,
         modality: modalityValues[i % modalityValues.length],
         tierRequired: tierValues[i % tierValues.length],
@@ -282,8 +348,8 @@ async function run(): Promise<void> {
         moduleRepo.create({
           course,
           index: m,
-          title: `Module ${m} - ${course.slug}`,
-          summary: `Synthetic module ${m}`,
+          title: `Modulo ${m} - ${course.title}`,
+          summary: `Resumen del modulo ${m}`,
         }),
       );
     }
@@ -296,8 +362,8 @@ async function run(): Promise<void> {
           lessonRepo.create({
             module,
             index: l,
-            title: `Lesson ${l} - module ${module.id}`,
-            content: `Synthetic lesson content ${l}`,
+            title: `Leccion ${l} del modulo ${module.index}`,
+            content: `Contenido de prueba para la leccion ${l}`,
             durationMin: randomInt(8, 45),
           }),
         );
@@ -364,7 +430,7 @@ async function run(): Promise<void> {
     const quiz = quizRepo.create({
       course,
       lesson: lessonList[0],
-      title: `Quiz - ${course.slug}`,
+      title: `Evaluacion - ${course.title}`,
       type: QuizType.QUIZ,
       passScore: 60,
       attemptLimit: 3,
@@ -379,7 +445,7 @@ async function run(): Promise<void> {
         questionRepo.create({
           quiz,
           type: QuestionType.MCQ,
-          prompt: `Question ${q} for quiz ${quiz.id}`,
+          prompt: `Pregunta ${q} del curso ${quiz.course?.title ?? quiz.id}`,
           points: 1,
         }),
       );
@@ -392,7 +458,7 @@ async function run(): Promise<void> {
         options.push(
           optionRepo.create({
             question,
-            text: `Option ${o}`,
+            text: `Opcion ${o}`,
             isCorrect: o === 1,
           }),
         );
@@ -470,6 +536,7 @@ async function run(): Promise<void> {
           synthetic: true,
           runId: cfg.runId,
           traceId: `perf-${i}`,
+          contexto: 'datos de prueba en espanol',
           at: new Date().toISOString(),
         },
       }),

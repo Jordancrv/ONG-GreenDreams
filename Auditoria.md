@@ -914,3 +914,39 @@ LIMIT :limit OFFSET :offset;
 - Normalizar level/language en COURSES
 - Definir reglas funcionales para CHALLENGES (curso O lección)
 - Agregar timestamps a CHALLENGE_SUBMISSIONS
+
+
+**PROBLEMAS ENCONTRADOS**
+
+- No existe limite al mostrar los tags en el apartado explorar, mientras mas tags existan y vayan creciendo los cursos agregados, sera una fatiga visual para el estudiante que quiera inscribirse a un curso.
+
+- Error al agregar cursos a favoritos 
+{statusCode: 500, message: "Internal server error"}
+message
+: 
+"Internal server error"
+statusCode
+: 
+500
+
+
+- Error al actualizar contraseña del usuario
+
+{firstName: "Ana", lastName: "Garcia", email: "estudiante@test.com", currentPassword: "123456",…}
+currentPassword
+: 
+"123456"
+email
+: 
+"estudiante@test.com"
+firstName
+: 
+"Ana"
+lastName
+: 
+"Garcia"
+password
+: 
+"123456789"
+
+- Doble creacion de datos en audit_logs debido a la doble peticion de API
