@@ -695,9 +695,6 @@ Aplica a:
 - Antes de crear índices/constraints/columnas, verifica existencia con `INFORMATION_SCHEMA` o `hasTable/hasColumn`.
 - Evita fallos por re-ejecución parcial (duplicados de índices/constraints/columnas).
 
-#### Reversión (down)
-- Reversión LIFO de todas las fases integradas en el mismo archivo.
-- Incluye eliminación de índices/checks/columnas agregadas durante hardening.
 
 #### Nota de alcance
 - En esta iteración quedó **activa** la migración de tabla `roles`.
@@ -706,247 +703,63 @@ Aplica a:
 
 ---
 
-## PARTE 5: ANALISIS DE 5 CONSULTAS CRÍTICAS Y OPTIMIZACIÓN
-
-### Consulta Crítica 1: Catálogo de cursos con filtros
-**Ubicación real en código**: `backend/src/courses/courses.service.ts` método `findAll()`
-**Endpoint asociado**: `GET /courses` en `backend/src/courses/courses.controller.ts`
-
-**Cómo se construye en el código (TypeORM QueryBuilder):**
-- Base: `FROM courses course`
-- JOINs: `LEFT JOIN tags tag`, `LEFT JOIN owner owner`
-- Filtro fijo: `course.visibility = 'PUBLIC'`
-- Filtros opcionales: `q`, `tag`, `modality`, `owner(email)`, `tier`
-
-**Patrón SQL aproximado (realista):**
-```sql
-SELECT
-  c.id,
-  c.title,
-  c.slug,
-  c.summary,
-  c.thumbnail_url,
-  c.modality,
-  c.tier_required,
-  c.visibility,
-  c.owner_id,
-  u.id AS owner_id,
-  u.email AS owner_email,
-  t.id AS tag_id,
-  t.name AS tag_name
-FROM courses c
-LEFT JOIN users u ON u.id = c.owner_id
-LEFT JOIN course_tags ct ON ct.courses_id = c.id
-LEFT JOIN tags t ON t.id = ct.tags_id
-WHERE c.visibility = 'PUBLIC'
-  AND (:q IS NULL OR (c.title LIKE CONCAT('%', :q, '%') OR c.summary LIKE CONCAT('%', :q, '%')))
-  AND (:tag IS NULL OR t.name = :tag)
-  AND (:modality IS NULL OR c.modality = :modality)
-  AND (:ownerEmail IS NULL OR u.email = :ownerEmail)
-  AND (:tier IS NULL OR c.tier_required = :tier);
-```
-
-**¿Es realmente crítica?**
-- ✅ Sí, crítica alta. Es la consulta principal de catálogo y afecta navegación, búsqueda y conversión.
-
-**¿Para qué sirve?**
-- Lista cursos públicos para explorar, buscar y filtrar en la plataforma.
-- Es una consulta de lectura frecuente (alta repetición), por eso impacta UX y costo de BD.
-
-**Riesgos actuales**
-- `LIKE '%texto%'` rompe uso eficiente de índices BTREE en `title/summary`.
-- `LEFT JOIN` + filtro por tag puede multiplicar filas y aumentar costo de sort/scan.
-- Sin paginación, el costo crece linealmente con el catálogo.
-
-**Mejoras recomendadas (ordenadas por impacto/seguridad):**
-1. **Paginación obligatoria** (`LIMIT/OFFSET` o cursor) para reducir filas por request.
-2. **Seleccionar columnas necesarias** (evitar `SELECT *`) para bajar I/O.
-3. **Índices base**:
-   - `INDEX courses(visibility, modality, tier_required)`
-   - `INDEX courses(owner_id)`
-   - `INDEX tags(name)`
-   - `UNIQUE courses(slug)` (ya existe y se mantiene)
-4. **Búsqueda de texto**: migrar de `LIKE '%q%'` a `FULLTEXT(title, summary)` cuando el volumen suba.
-5. **Tag filter más eficiente**: usar `EXISTS` en lugar de `LEFT JOIN` cuando solo se filtra por tag.
-
-**Versión optimizada sugerida (patrón SQL):**
-```sql
-SELECT
-  c.id,
-  c.title,
-  c.slug,
-  c.summary,
-  c.thumbnail_url,
-  c.modality,
-  c.tier_required,
-  c.visibility,
-  u.id AS owner_id,
-  u.email AS owner_email
-FROM courses c
-JOIN users u ON u.id = c.owner_id
-WHERE c.visibility = 'PUBLIC'
-  AND (:modality IS NULL OR c.modality = :modality)
-  AND (:tier IS NULL OR c.tier_required = :tier)
-  AND (:ownerEmail IS NULL OR u.email = :ownerEmail)
-  AND (
-    :tag IS NULL OR EXISTS (
-      SELECT 1
-      FROM course_tags ct
-      JOIN tags t ON t.id = ct.tags_id
-      WHERE ct.courses_id = c.id
-        AND t.name = :tag
-    )
-  )
-  AND (
-    :q IS NULL OR MATCH(c.title, c.summary) AGAINST(:q IN NATURAL LANGUAGE MODE)
-  )
-ORDER BY c.created_at DESC
-LIMIT :limit OFFSET :offset;
-```
-
-**Nota práctica para tu backend actual:**
-- Puedes empezar ya con paginación + selección de columnas + índices base (cambio de bajo riesgo).
-- FULLTEXT y `EXISTS` los aplicas en una segunda iteración para comparar `EXPLAIN` antes/después.
-
----
-
-### Consulta Crítica 2: Progreso del usuario en curso
-**Ubicación real en código**: `backend/src/progress/progress.service.ts` método `getCourseProgress()`
-**Endpoint asociado**: `GET /progress/me/courses/:courseId` en `backend/src/progress/progress.controller.ts`
-
-**¿Es realmente crítica?**
-- ✅ Sí, crítica media-alta. Impacta directamente la experiencia del alumno y dashboards de avance.
-
-**¿Para qué sirve?**
-- Calcula total de lecciones, completadas y porcentaje de progreso por curso/usuario.
-
-**Riesgos**:
-- Joins encadenados (lesson -> module -> course) costosos sin índices adecuados
-- Recalcular progreso completo en cada request puede escalar mal
-
-**Optimización**:
-- Ajuste importante: en el modelo actual `lesson_progress` no tiene `course_id`, por lo que ese índice no aplica
-- Mantener/asegurar UNIQUE o INDEX en lesson_progress(user_id, lesson_id)
-- INDEX lessons(module_id)
-- INDEX course_modules(course_id)
-- Cache de progreso por usuario/curso si aumenta tráfico
-
----
-
-### Consulta Crítica 3: Scoreboards de intentos
-**Ubicación real en código**: No existe actualmente `getLeaderboard()` en `backend/src/attempts/attempts.service.ts`
-
-**¿Es realmente crítica?**
-- ⚠️ No es crítica hoy en producción porque aún no está implementada.
-- ✅ Sí sería crítica al activarla para ranking y analítica.
-
-**¿Para qué serviría?**
-- Ranking de desempeño por quiz, curso, cohorte o ventana de tiempo.
-
-**Riesgos**:
-- GROUP BY sin índices degrada con volumen
-
-**Optimización**:
-- INDEX attempts(quiz_id, score)
-- INDEX attempts(user_id, created_at)
-- Definir regla de ranking (mejor intento, último intento o promedio) para evitar resultados ambiguos
-
----
-
-### Consulta Crítica 4: Historial de cambios (auditoría)
-**Ubicación real en código**:
-- Escritura de logs: `backend/src/audit/audit.service.ts` método `record()`
-- Disparador transversal: `backend/src/common/interceptors/audit.interceptor.ts`
-
-**¿Es realmente crítica?**
-- ✅ Sí, crítica de trazabilidad/compliance.
-
-**¿Para qué sirve?**
-- Registra acción HTTP, metadata y usuario para auditoría operativa.
-
-**Riesgos**:
-- TABLE SCAN si no hay índices en timestamps
-- Crecimiento rápido de metadata JSON puede afectar I/O y backup
-
-**Optimización**:
-- INDEX audit_logs(user_id, created_at)
-- INDEX audit_logs(action, created_at)
-- Política de retención/archivado para logs históricos
-
----
-
-### Consulta Crítica 5: Validación de respuesta en examen
-**Ubicación real en código**: `backend/src/attempts/attempts.service.ts` método `addAnswer()`
-**Endpoint asociado**: `POST /attempts/:id/answers` en `backend/src/attempts/attempts.controller.ts`
-
-**¿Es realmente crítica?**
-- ✅ Sí, crítica alta por integridad académica y cálculo de notas.
-
-**¿Para qué sirve?**
-- Valida que la pregunta pertenezca al intento/quiz y registra respuesta con corrección/puntaje.
-
-**Riesgos**:
-- Inconsistencia si option.question_id ≠ answer.question_id
-- Condición de carrera sin UNIQUE puede permitir respuestas duplicadas por pregunta
-
-**Optimización**:
-- UNIQUE answers(attempt_id, question_id)
-- INDEX answers(question_id)
-- Validación en backend antes de INSERT
-- Validar explícitamente que `option.question_id == question.id` antes de guardar
-
----
-
-## Resumen General
-
-✅ **Migraciones Completadas**: 2/2 activas (InitialSchema + InitialMigration)
-
-✅ **Integridad de Datos**: Hardened con NOT NULL + UNIQUE + CHECK constraints
-
-✅ **Soft Delete**: Implementado para usuarios
-
-✅ **Auditoría**: Tabla subscriptions_logs para historial de precios
-
-✅ **Estabilidad de Roles**: Activo `users.role_id` + tabla `roles` (modelo escalable)
-
-⏳ **Próximos Pasos**:
-- Crear índices de performance según consultas críticas
-- Normalizar level/language en COURSES
-- Definir reglas funcionales para CHALLENGES (curso O lección)
-- Agregar timestamps a CHALLENGE_SUBMISSIONS
-
+## PARTE 5: ANALISIS DE CONSULTAS CRÍTICAS Y OPTIMIZACIÓN
 
 **PROBLEMAS ENCONTRADOS**
 
-- No existe limite al mostrar los tags en el apartado explorar, mientras mas tags existan y vayan creciendo los cursos agregados, sera una fatiga visual para el estudiante que quiera inscribirse a un curso.
+### 1) Visualizacion de tags sin limite en Explorar
 
-- Error al agregar cursos a favoritos 
-{statusCode: 500, message: "Internal server error"}
-message
-: 
-"Internal server error"
-statusCode
-: 
-500
+**Descripcion**
+- Actualmente se muestran todos los tags disponibles en una sola vista, sin limite inicial ni mecanismo de paginacion/expansion.
 
+**Impacto observado**
+- A medida que crece el catalogo, la pantalla se vuelve mas cargada y puede generar fatiga visual al estudiante.
 
-- Error al actualizar contraseña del usuario
+**Evidencia**
+- En la vista de explorar se renderiza el listado completo de categorias.
 
-{firstName: "Ana", lastName: "Garcia", email: "estudiante@test.com", currentPassword: "123456",…}
-currentPassword
-: 
-"123456"
-email
-: 
-"estudiante@test.com"
-firstName
-: 
-"Ana"
-lastName
-: 
-"Garcia"
-password
-: 
-"123456789"
+### 2) Error al agregar cursos a favoritos
 
-- Doble creacion de datos en audit_logs debido a la doble peticion de API
+**Descripcion**
+- Al intentar agregar un curso a favoritos, el sistema responde con error interno del servidor.
+
+**Evidencia**
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error"
+}
+```
+
+**Impacto observado**
+- La funcionalidad de favoritos queda inestable y afecta la experiencia del usuario en el descubrimiento de cursos.
+
+### 3) Error al actualizar la contrasena del usuario
+
+**Descripcion**
+- Se detecta falla al enviar la actualizacion del perfil con cambio de contrasena.
+
+**Evidencia (payload probado)**
+```json
+{
+  "firstName": "Ana",
+  "lastName": "Garcia",
+  "email": "estudiante@test.com",
+  "currentPassword": "123456",
+  "password": "123456789"
+}
+```
+
+**Impacto observado**
+- El usuario no puede completar una accion basica de seguridad y gestion de cuenta.
+
+### 4) Doble creacion de registros en audit_logs
+
+**Descripcion**
+- Se observan inserciones duplicadas en `audit_logs` asociadas a doble peticion de API.
+
+**Impacto observado**
+- Incremento innecesario del volumen de logs y posible ruido en trazabilidad/auditoria.
+
+**Evidencia**
+- Para una accion unica de usuario, se registran dos entradas en logs.
