@@ -14,7 +14,6 @@ Mantener una estructura de seguimiento para no perder avance al reiniciar el pro
 - [x] Backend en Docker ejecuta schema sync y seed automaticamente al arrancar.
 - [x] Levantar contenedores y validar salud de servicios.
 - [x] Verificar login con los 4 usuarios de prueba.
-- [ ] Preparar commit manual con mensaje propio.
 
 ## 3. Comandos base (PowerShell, desde investigaODS)
 
@@ -50,8 +49,8 @@ docker compose down
 
 ## 5. Credenciales sincronizadas (frontend + backend seed)
 
-- estudiante@test.com / 123456 -> STUDENT BASIC
-- pro@test.com / 123456 -> STUDENT PRO
+- estudiante@test.com / 123456 -> STUDENT PRO
+- pro@test.com / 123456 -> STUDENT BASIC
 - instructor@test.com / 123456 -> INSTRUCTOR BASIC
 - admin@test.com / 123456 -> ADMIN BASIC
 
