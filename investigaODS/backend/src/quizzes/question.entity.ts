@@ -12,7 +12,7 @@ export enum QuestionType {
 
 @Entity({ name: 'questions' })
 export class Question extends BaseEntity {
-  @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE', nullable: false })
   quiz!: Quiz;
 
   @Column({ type: 'enum', enum: QuestionType, default: QuestionType.MCQ })

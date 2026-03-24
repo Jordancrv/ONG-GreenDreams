@@ -11,10 +11,10 @@ export enum SubscriptionStatus {
 
 @Entity({ name: 'subscriptions' })
 export class Subscription extends BaseEntity {
-  @ManyToOne(() => User, (user) => user.subscriptions, { eager: true })
+  @ManyToOne(() => User, (user) => user.subscriptions, { eager: true, nullable: false })
   user!: User;
 
-  @ManyToOne(() => MembershipPlan, (plan) => plan.subscriptions, { eager: true })
+  @ManyToOne(() => MembershipPlan, (plan) => plan.subscriptions, { eager: true, nullable: false })
   plan!: MembershipPlan;
 
   @Column({ name: 'start_at', type: 'datetime' })

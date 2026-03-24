@@ -347,7 +347,7 @@ async function run(): Promise<void> {
       modules.push(
         moduleRepo.create({
           course,
-          index: m,
+          position: m,
           title: `Modulo ${m} - ${course.title}`,
           summary: `Resumen del modulo ${m}`,
         }),
@@ -361,8 +361,8 @@ async function run(): Promise<void> {
         lessons.push(
           lessonRepo.create({
             module,
-            index: l,
-            title: `Leccion ${l} del modulo ${module.index}`,
+            position: l,
+            title: `Leccion ${l} del modulo ${module.position}`,
             content: `Contenido de prueba para la leccion ${l}`,
             durationMin: randomInt(8, 45),
           }),

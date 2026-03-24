@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Course } from '../courses/course.entity';
 import { Cohort } from '../cohorts/cohort.entity';
@@ -10,14 +10,15 @@ export enum EnrollmentStatus {
 }
 
 @Entity({ name: 'enrollments' })
+@Index('UQ_enrollments_user_course', ['user', 'course'], { unique: true })
 export class Enrollment {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => User, (user) => user.enrollments, { eager: true })
+  @ManyToOne(() => User, (user) => user.enrollments, { eager: true, nullable: false })
   user!: User;
 
-  @ManyToOne(() => Course, (course) => course.enrollments, { eager: true })
+  @ManyToOne(() => Course, (course) => course.enrollments, { eager: true, nullable: false })
   course!: Course;
 
   @ManyToOne(() => Cohort, (cohort) => cohort.enrollments, { eager: true, nullable: true })

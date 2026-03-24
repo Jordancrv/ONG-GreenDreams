@@ -125,10 +125,10 @@ export class CoursesService {
     }
     this.assertCanView(course, user);
     if (course.modules) {
-      course.modules = course.modules.sort((a, b) => a.index - b.index);
+      course.modules = course.modules.sort((a, b) => a.position - b.position);
       course.modules.forEach((module) => {
         if (module.lessons) {
-          module.lessons = module.lessons.sort((a, b) => a.index - b.index);
+          module.lessons = module.lessons.sort((a, b) => a.position - b.position);
         }
       });
     }
@@ -179,7 +179,12 @@ export class CoursesService {
   async createModule(courseId: number, dto: CreateModuleDto, user: User) {
     const course = await this.findById(courseId);
     this.assertCanManageCourse(course, user);
-    const module = this.modulesRepository.create({ course, ...dto });
+    const position = dto.position ?? dto.index;
+    const module = this.modulesRepository.create({
+      course,
+      ...dto,
+      position,
+    });
     return this.modulesRepository.save(module);
   }
 
@@ -192,7 +197,11 @@ export class CoursesService {
       throw new NotFoundException('Module not found');
     }
     this.assertCanManageCourse(module.course, user);
-    Object.assign(module, dto);
+    const position = dto.position ?? dto.index;
+    Object.assign(module, {
+      ...dto,
+      ...(position !== undefined ? { position } : {}),
+    });
     return this.modulesRepository.save(module);
   }
 
@@ -217,7 +226,12 @@ export class CoursesService {
       throw new NotFoundException('Module not found');
     }
     this.assertCanManageCourse(module.course, user);
-    const lesson = this.lessonsRepository.create({ module, ...dto });
+    const position = dto.position ?? dto.index;
+    const lesson = this.lessonsRepository.create({
+      module,
+      ...dto,
+      position,
+    });
     return this.lessonsRepository.save(lesson);
   }
 
@@ -230,7 +244,11 @@ export class CoursesService {
       throw new NotFoundException('Lesson not found');
     }
     this.assertCanManageCourse(lesson.module.course, user);
-    Object.assign(lesson, dto);
+    const position = dto.position ?? dto.index;
+    Object.assign(lesson, {
+      ...dto,
+      ...(position !== undefined ? { position } : {}),
+    });
     return this.lessonsRepository.save(lesson);
   }
 

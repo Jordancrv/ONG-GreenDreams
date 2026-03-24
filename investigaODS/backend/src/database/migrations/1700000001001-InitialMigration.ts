@@ -404,7 +404,7 @@ export class InitialHardeningWeek121700000001001 implements MigrationInterface {
     // FASE 7: ESTANDARIZACIÓN DE NAMING (PLACEHOLDER)
     // ============================================================================
     console.log('[MIGRACION] FASE 7: Estandarización de naming...');
-    console.log('[MIGRACION] FASE 7: Nota - renaming de index a position pospuesto para seguridad de FK');
+    console.log('[MIGRACION] FASE 7: Nota - naming de position aplicado en entidades para evitar palabra reservada index');
     console.log('[MIGRACION] FASE 7: Estandarización completada ✓');
 
     // ============================================================================

@@ -34,14 +34,14 @@ export enum CourseTier {
 
 @Entity({ name: 'courses' })
 export class Course extends BaseEntity {
-  @ManyToOne(() => User, (user) => user.courses, { eager: true })
+  @ManyToOne(() => User, (user) => user.courses, { eager: true, nullable: false })
   owner!: User;
 
   @Column()
   title!: string;
 
-  @Column({ unique: false, nullable: true })
-  slug?: string;
+  @Column({ unique: true, nullable: false })
+  slug!: string;
 
   @Column({ nullable: true })
   summary?: string;

@@ -8,10 +8,10 @@ export class Answer {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Attempt, (attempt) => attempt.answers, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Attempt, (attempt) => attempt.answers, { onDelete: 'CASCADE', nullable: false })
   attempt!: Attempt;
 
-  @ManyToOne(() => Question, (question) => question.answers, { eager: true })
+  @ManyToOne(() => Question, (question) => question.answers, { eager: true, nullable: false })
   question!: Question;
 
   @ManyToOne(() => Option, { eager: true, nullable: true })

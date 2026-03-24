@@ -1,16 +1,17 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
 import { CourseModule } from '../courses/course-module.entity';
 import { LessonProgress } from '../progress/lesson-progress.entity';
 import { Quiz } from '../quizzes/quiz.entity';
 
 @Entity({ name: 'lessons' })
+@Index('UQ_lessons_module_position', ['module', 'position'], { unique: true })
 export class Lesson extends BaseEntity {
-  @ManyToOne(() => CourseModule, (module) => module.lessons, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CourseModule, (module) => module.lessons, { onDelete: 'CASCADE', nullable: false })
   module!: CourseModule;
 
-  @Column()
-  index!: number;
+  @Column({ name: 'position' })
+  position!: number;
 
   @Column()
   title!: string;

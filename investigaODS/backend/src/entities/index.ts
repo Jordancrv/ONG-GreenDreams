@@ -2,6 +2,7 @@ export { User } from '../users/user.entity';
 export { Role } from '../roles/role.entity';
 export { MembershipPlan } from '../plans/membership-plan.entity';
 export { Subscription } from '../subscriptions/subscription.entity';
+export { SubscriptionLog } from '../subscriptions/subscription-log.entity';
 export { Course } from '../courses/course.entity';
 export { CourseModule } from '../courses/course-module.entity';
 export { Lesson } from '../lessons/lesson.entity';

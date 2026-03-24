@@ -5,7 +5,13 @@ export class CreateLessonDto {
   @ApiProperty()
   @IsInt()
   @Min(0)
-  index!: number;
+  position!: number;
+
+  @ApiPropertyOptional({ deprecated: true, description: 'Use position instead' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  index?: number;
 
   @ApiProperty()
   @IsString()

@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
 import { Course } from '../courses/course.entity';
 import { Enrollment } from '../enrollments/enrollment.entity';
@@ -9,6 +9,8 @@ import { Role } from '../roles/role.entity';
 import { UserRole } from './user-role.enum';
 
 @Entity({ name: 'users' })
+@Index('idx_users_deleted_at', ['deletedAt'])
+@Index('idx_users_active', ['deletedAt', 'status'])
 export class User extends BaseEntity {
   @Column({ unique: true })
   email!: string;

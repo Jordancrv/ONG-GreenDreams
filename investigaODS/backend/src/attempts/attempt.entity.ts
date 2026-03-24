@@ -12,10 +12,10 @@ export enum AttemptStatus {
 
 @Entity({ name: 'attempts' })
 export class Attempt extends BaseEntity {
-  @ManyToOne(() => Quiz, (quiz) => quiz.attempts, { eager: true })
+  @ManyToOne(() => Quiz, (quiz) => quiz.attempts, { eager: true, nullable: false })
   quiz!: Quiz;
 
-  @ManyToOne(() => User, (user) => user.attempts, { eager: true })
+  @ManyToOne(() => User, (user) => user.attempts, { eager: true, nullable: false })
   user!: User;
 
   @Column({ name: 'started_at', type: 'datetime' })

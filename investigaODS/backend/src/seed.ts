@@ -189,11 +189,11 @@ async function seed() {
     course = await courseRepo.save(course);
 
     const module = await moduleRepo.save(
-      moduleRepo.create({ course, index: 1, title: 'Welcome Module' }),
+      moduleRepo.create({ course, position: 1, title: 'Welcome Module' }),
     );
 
     const lesson = await lessonRepo.save(
-      lessonRepo.create({ module, index: 1, title: 'Welcome Lesson', content: 'Introduction' }),
+      lessonRepo.create({ module, position: 1, title: 'Welcome Lesson', content: 'Introduction' }),
     );
 
     const quiz = await quizRepo.save(

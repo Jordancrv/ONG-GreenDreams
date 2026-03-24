@@ -6,7 +6,7 @@ export class Option {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Question, (question) => question.options, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Question, (question) => question.options, { onDelete: 'CASCADE', nullable: false })
   question!: Question;
 
   @Column({ type: 'text' })
