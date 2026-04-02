@@ -25,6 +25,7 @@ import { HealthModule } from './health/health.module';
 import { TagsModule } from './tags/tags.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { RolesModule } from './roles/roles.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { RolesModule } from './roles/roles.module';
     TagsModule,
     FavoritesModule,
     RolesModule,
+    FileUploadModule,
   ],
   providers: [
     {
