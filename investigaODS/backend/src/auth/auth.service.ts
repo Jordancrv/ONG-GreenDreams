@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   getRefreshCookieOptions() {
-    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES', '7d');
+    const expiresIn = this.configService.get<string>('JWT_REFRESH_TTL', '7d');
     const maxAgeMs = this.parseDurationMs(expiresIn);
     return {
       httpOnly: true,
@@ -112,7 +112,7 @@ export class AuthService {
   }
 
   private parseDurationMs(duration: string): number {
-    const match = duration.match(/^(\\d+)([smhdw])$/);
+    const match = duration.match(/^(\d+)([smhdw])$/);
     if (!match) {
       return 7 * 24 * 60 * 60 * 1000;
     }

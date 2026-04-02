@@ -674,7 +674,7 @@ Aplica a:
 - courses(slug)
 - enrollments(user_id, course_id)
 - lesson_progress(user_id, lesson_id)
-- user_points(user_id, course_id)
+- user_points(user_id, course_id)add
 - course_modules(course_id, index)
 - lessons(module_id, index)
 

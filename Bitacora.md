@@ -62,7 +62,7 @@ docker compose down
 - [x] Login de `instructor@test.com` funciona y entra a panel instructor.
 - [x] Login de `admin@test.com` funciona y entra a panel admin.
 
-Resultado final: stack levantado con Docker (DB, phpMyAdmin, backend, frontend, IA) y credenciales frontend/backend sincronizadas por seed.
+
 
 ## 7. Checklist de commit (manual)
 
