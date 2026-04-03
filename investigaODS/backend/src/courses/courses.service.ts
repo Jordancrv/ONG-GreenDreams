@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Course, CourseTier } from './course.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -33,29 +33,36 @@ export class CoursesService {
   ) {}
 
   async findAll(filters: CourseFilterDto) {
-    const qb = this.coursesRepository
-      .createQueryBuilder('course')
-      .leftJoinAndSelect('course.tags', 'tag')
-      .leftJoinAndSelect('course.owner', 'owner')
-      .where('course.visibility = :visibility', { visibility: 'PUBLIC' });
-
-    if (filters.q) {
-      qb.andWhere('(course.title LIKE :q OR course.summary LIKE :q)', { q: `%${filters.q}%` });
-    }
-    if (filters.tag) {
-      qb.andWhere('tag.name = :tag', { tag: filters.tag });
-    }
-    if (filters.modality) {
-      qb.andWhere('course.modality = :modality', { modality: filters.modality });
-    }
-    if (filters.owner) {
-      qb.andWhere('owner.email = :owner', { owner: filters.owner });
-    }
-    if (filters.tier) {
-      qb.andWhere('course.tierRequired = :tier', { tier: filters.tier });
-    }
+    const qb = this.buildPublicCoursesQuery(filters);
     const courses = await qb.getMany();
     return courses.map((course) => this.stripCourseOwner(course));
+  }
+
+  async search(filters: CourseFilterDto) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 12;
+    const sortBy = filters.sortBy ?? 'createdAt';
+    const order = filters.order ?? 'DESC';
+
+    const qb = this.buildPublicCoursesQuery(filters)
+      .orderBy(`course.${sortBy}`, order)
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return {
+      items: items.map((course) => this.stripCourseOwner(course)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async findAllForAdmin() {
@@ -343,6 +350,32 @@ export class CoursesService {
       tags.push(tag);
     }
     return tags;
+  }
+
+  private buildPublicCoursesQuery(filters: CourseFilterDto): SelectQueryBuilder<Course> {
+    const qb = this.coursesRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.tags', 'tag')
+      .leftJoinAndSelect('course.owner', 'owner')
+      .where('course.visibility = :visibility', { visibility: 'PUBLIC' });
+
+    if (filters.q) {
+      qb.andWhere('(course.title LIKE :q OR course.summary LIKE :q)', { q: `%${filters.q}%` });
+    }
+    if (filters.tag) {
+      qb.andWhere('tag.name = :tag', { tag: filters.tag });
+    }
+    if (filters.modality) {
+      qb.andWhere('course.modality = :modality', { modality: filters.modality });
+    }
+    if (filters.owner) {
+      qb.andWhere('owner.email = :owner', { owner: filters.owner });
+    }
+    if (filters.tier) {
+      qb.andWhere('course.tierRequired = :tier', { tier: filters.tier });
+    }
+
+    return qb;
   }
 
   private stripCourseOwner(course: Course) {

@@ -356,7 +356,7 @@ export const InstructorStudents: React.FC = () => {
                           fontSize: '14px',
                           color: 'rgba(255, 255, 255, 0.7)',
                         }}>
-                          {formatDate(enrollment.enrolledAt)}
+                          {formatDate(enrollment.enrolledAt ?? enrollment.createdAt)}
                         </div>
                       </div>
                     ))}
@@ -419,7 +419,7 @@ export const InstructorStudents: React.FC = () => {
                           fontSize: '12px',
                           color: 'rgba(255, 255, 255, 0.5)',
                         }}>
-                          📅 Inscrito: {formatDate(enrollment.enrolledAt)}
+                          📅 Inscrito: {formatDate(enrollment.enrolledAt ?? enrollment.createdAt)}
                         </div>
                       </div>
                     ))}

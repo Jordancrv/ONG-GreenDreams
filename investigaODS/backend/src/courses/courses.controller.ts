@@ -25,6 +25,11 @@ export class CoursesController {
     return this.coursesService.findAll(filters);
   }
 
+  @Get('search')
+  async search(@Query() filters: CourseFilterDto) {
+    return this.coursesService.search(filters);
+  }
+
   @Get('my-courses')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,12 +38,12 @@ export class CoursesController {
     return this.coursesService.findMyCourses(user);
   }
 
-  @Get(':id')
+  @Get(':id(\\d+)')
   async getById(@Param('id') id: number) {
     return this.coursesService.findById(Number(id));
   }
 
-  @Get(':id/stats')
+  @Get(':id(\\d+)/stats')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -46,7 +51,7 @@ export class CoursesController {
     return this.coursesService.getCourseStats(Number(id), user);
   }
 
-  @Get(':id/outline')
+  @Get(':id(\\d+)/outline')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async outline(@Param('id') id: number, @CurrentUser() user: User) {
@@ -61,7 +66,7 @@ export class CoursesController {
     return this.coursesService.create(user, dto);
   }
 
-  @Patch(':id')
+  @Patch(':id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -69,7 +74,7 @@ export class CoursesController {
     return this.coursesService.update(Number(id), dto, user);
   }
 
-  @Delete(':id')
+  @Delete(':id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -78,7 +83,7 @@ export class CoursesController {
     return { success: true };
   }
 
-  @Post(':id/modules')
+  @Post(':id(\\d+)/modules')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -90,7 +95,7 @@ export class CoursesController {
     return this.coursesService.createModule(Number(id), dto, user);
   }
 
-  @Patch('modules/:id')
+  @Patch('modules/:id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -102,7 +107,7 @@ export class CoursesController {
     return this.coursesService.updateModule(Number(id), dto, user);
   }
 
-  @Delete('modules/:id')
+  @Delete('modules/:id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -111,7 +116,7 @@ export class CoursesController {
     return { success: true };
   }
 
-  @Post('/modules/:id/lessons')
+  @Post('/modules/:id(\\d+)/lessons')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -123,7 +128,7 @@ export class CoursesController {
     return this.coursesService.createLesson(Number(id), dto, user);
   }
 
-  @Patch('lessons/:id')
+  @Patch('lessons/:id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
@@ -135,7 +140,7 @@ export class CoursesController {
     return this.coursesService.updateLesson(Number(id), dto, user);
   }
 
-  @Delete('lessons/:id')
+  @Delete('lessons/:id(\\d+)')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)

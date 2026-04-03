@@ -77,12 +77,56 @@ export interface CourseFilters {
   tag?: string;
 }
 
+export interface CourseSearchParams extends CourseFilters {
+  page?: number;
+  limit?: number;
+  sortBy?: 'createdAt' | 'title';
+  order?: 'ASC' | 'DESC';
+}
+
+export interface CourseUpsertPayload {
+  title?: string;
+  slug?: string;
+  summary?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  level?: string;
+  language?: string;
+  visibility?: string;
+  modality?: string;
+  tierRequired?: string;
+  hasCertificate?: boolean;
+  supportsLive?: boolean;
+  supportsChallenges?: boolean;
+  tags?: string[];
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
 export const coursesService = {
   /**
    * Get all courses with optional filters
    */
   async getAll(filters?: CourseFilters): Promise<Course[]> {
     const response = await api.get('/courses', { params: filters });
+    return response.data;
+  },
+
+  /**
+   * Search courses with pagination and filters
+   */
+  async search(params: CourseSearchParams): Promise<PaginatedResponse<Course>> {
+    const response = await api.get('/courses/search', { params });
     return response.data;
   },
 
@@ -121,7 +165,7 @@ export const coursesService = {
   /**
    * Create a new course (instructors only)
    */
-  async create(data: Partial<Course>): Promise<Course> {
+  async create(data: CourseUpsertPayload): Promise<Course> {
     const response = await api.post('/courses', data);
     return response.data;
   },
@@ -129,7 +173,7 @@ export const coursesService = {
   /**
    * Update a course (instructors only)
    */
-  async update(id: number, data: Partial<Course>): Promise<Course> {
+  async update(id: number, data: CourseUpsertPayload): Promise<Course> {
     const response = await api.patch(`/courses/${id}`, data);
     return response.data;
   },

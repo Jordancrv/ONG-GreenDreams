@@ -37,12 +37,25 @@ export const Explore: React.FC = () => {
   const { isMobile } = useBreakpoint();
   const { user } = useAuth();
   const { tags, isLoading: isLoadingTags } = useTags();
-  const { courses: searchResults, isLoading: isSearching, searchCourses, clearSearch } = useCourseSearch();
+  const {
+    courses: searchResults,
+    total,
+    totalPages,
+    isLoading: isSearching,
+    searchCourses,
+    clearSearch,
+  } = useCourseSearch();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isSearchActive, setIsSearchActive] = useState(false);
 
-  // Perform search when query or filter changes
+  // Reset pagination when search criteria change.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filter]);
+
+  // Perform search when criteria or page changes.
   useEffect(() => {
     const tierFilter = filter === 'FREE' ? 'FREE' : filter === 'PRO' ? 'PRO' : 'ALL';
     const hasQuery = searchQuery.trim().length > 0;
@@ -50,12 +63,12 @@ export const Explore: React.FC = () => {
 
     if (hasQuery || hasTierOnlyFilter) {
       setIsSearchActive(true);
-      searchCourses(searchQuery, tierFilter);
+      searchCourses(searchQuery, tierFilter, currentPage, 9);
     } else {
       setIsSearchActive(false);
       clearSearch();
     }
-  }, [searchQuery, filter, searchCourses, clearSearch]);
+  }, [searchQuery, filter, currentPage, searchCourses, clearSearch]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -139,7 +152,7 @@ export const Explore: React.FC = () => {
               margin: 0,
               marginBottom: '16px',
             }}>
-              Resultados de búsqueda ({isSearching ? '...' : searchResults.length})
+              Resultados de busqueda ({isSearching ? '...' : total})
             </h3>
 
             {isSearching ? (
@@ -177,21 +190,70 @@ export const Explore: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : null}
+
+            {!isSearching && totalPages > 1 ? (
               <div style={{
-                padding: '40px',
-                textAlign: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: theme.borderRadius.lg,
+                marginTop: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                flexWrap: 'wrap',
               }}>
-                <p style={{
-                  fontSize: theme.typography.fontSize.lg,
-                  color: theme.colors.textSecondary,
-                  margin: 0,
-                }}>
-                  No se encontraron cursos que coincidan con tu búsqueda
-                </p>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: theme.borderRadius.full,
+                    border: `1px solid ${theme.colors.primary}`,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textPrimary,
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.6 : 1,
+                  }}
+                >
+                  Anterior
+                </button>
+
+                <span style={{ color: theme.colors.textSecondary }}>
+                  Pagina {currentPage} de {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: theme.borderRadius.full,
+                    border: `1px solid ${theme.colors.primary}`,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textPrimary,
+                    cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage >= totalPages ? 0.6 : 1,
+                  }}
+                >
+                  Siguiente
+                </button>
               </div>
+            ) : (
+              !isSearching && searchResults.length === 0 ? (
+                <div style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: theme.borderRadius.lg,
+                }}>
+                  <p style={{
+                    fontSize: theme.typography.fontSize.lg,
+                    color: theme.colors.textSecondary,
+                    margin: 0,
+                  }}>
+                    No se encontraron cursos que coincidan con tu busqueda
+                  </p>
+                </div>
+              ) : null
             )}
           </section>
         )}

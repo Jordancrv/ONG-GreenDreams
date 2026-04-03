@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { CourseModality, CourseTier } from '../course.entity';
 
 export class CourseFilterDto {
@@ -27,4 +27,29 @@ export class CourseFilterDto {
   @IsOptional()
   @IsEnum(CourseTier)
   tier?: CourseTier;
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 12 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+
+  @ApiPropertyOptional({ enum: ['createdAt', 'title'], default: 'createdAt' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['createdAt', 'title'])
+  sortBy?: 'createdAt' | 'title';
+
+  @ApiPropertyOptional({ enum: ['ASC', 'DESC'], default: 'DESC' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['ASC', 'DESC'])
+  order?: 'ASC' | 'DESC';
 }

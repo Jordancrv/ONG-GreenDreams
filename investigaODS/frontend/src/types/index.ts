@@ -14,6 +14,8 @@ export interface User {
   firstName?: string;
   lastName?: string;
   avatarUrl?: string;
+  planCode?: PlanCode;
+  tier?: 'FREE' | 'BASIC' | 'PRO';
   role: UserRole;
   createdAt?: string;
   updatedAt?: string;
@@ -110,6 +112,8 @@ export interface Enrollment {
   cohortId?: number;
   status: EnrollmentStatus;
   createdAt: string;
+  enrolledAt?: string;
+  user?: User;
   course?: Course;
 } 
 
@@ -208,8 +212,6 @@ export interface Certificate {
 // MEMBERSHIP & SUBSCRIPTION TYPES
 // ============================================
 
-export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
-
 export interface MembershipPlan {
   id: string;
   code: PlanCode;
@@ -217,16 +219,6 @@ export interface MembershipPlan {
   features: string[];
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
-}
-
-export interface Subscription {
-  id: string;
-  userId: string;
-  planId: string;
-  plan?: MembershipPlan;
-  startAt: string;
-  endAt?: string;
-  status: SubscriptionStatus;
 }
 
 // ============================================

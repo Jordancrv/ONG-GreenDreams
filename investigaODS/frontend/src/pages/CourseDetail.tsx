@@ -399,7 +399,7 @@ export const CourseDetail: React.FC = () => {
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
-          {course.modules.map((module, idx) => (
+          {(course.modules ?? []).map((module, idx) => (
             <div
               key={module.id}
               style={{
@@ -427,7 +427,7 @@ export const CourseDetail: React.FC = () => {
 
               {/* Lessons */}
               <div style={{ padding: isMobile ? '4px 0' : '8px 0' }}>
-                {module.lessons.map((lesson) => (
+                {(module.lessons ?? []).map((lesson) => (
                   <div
                     key={lesson.id}
                     onClick={() => isEnrolled && canAccess && handleStartLesson(lesson.id)}

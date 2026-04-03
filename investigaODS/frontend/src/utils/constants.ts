@@ -23,13 +23,13 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   COURSES: '/courses',
-  COURSE_DETAIL: (slug: string) => `/courses/${slug}`,
+  COURSE_DETAIL: (slug: string | number) => `/courses/${slug}`,
   
   // Student routes
   DASHBOARD: '/dashboard',
   DASHBOARD_BASIC: '/dashboard/basic',
   DASHBOARD_PRO: '/dashboard/pro',
-  LEARN: (courseId: string, lessonId: string) => `/learn/${courseId}/${lessonId}`,
+  LEARN: (courseId: string | number, lessonId: string | number) => `/learn/${courseId}/${lessonId}`,
   CERTIFICATES: '/certificates',
   MY_ENROLLMENTS: '/my-enrollments',
   
@@ -39,8 +39,8 @@ export const ROUTES = {
   INSTRUCTOR_COURSES: '/instructor/courses',
   INSTRUCTOR_STUDENTS: '/instructor/students',
   INSTRUCTOR_COURSE_CREATE: '/instructor/courses/new',
-  INSTRUCTOR_COURSE_BUILDER: (id: string) => `/instructor/courses/${id}/builder`,
-  INSTRUCTOR_COURSE_STUDENTS: (id: string) => `/instructor/courses/${id}/students`,
+  INSTRUCTOR_COURSE_BUILDER: (id: string | number) => `/instructor/courses/${id}/builder`,
+  INSTRUCTOR_COURSE_STUDENTS: (id: string | number) => `/instructor/courses/${id}/students`,
   
   // Admin routes
   ADMIN: '/admin',
