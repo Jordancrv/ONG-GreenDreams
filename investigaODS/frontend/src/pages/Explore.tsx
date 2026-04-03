@@ -44,9 +44,12 @@ export const Explore: React.FC = () => {
 
   // Perform search when query or filter changes
   useEffect(() => {
-    if (searchQuery.trim().length > 0) {
+    const tierFilter = filter === 'FREE' ? 'FREE' : filter === 'PRO' ? 'PRO' : 'ALL';
+    const hasQuery = searchQuery.trim().length > 0;
+    const hasTierOnlyFilter = tierFilter !== 'ALL';
+
+    if (hasQuery || hasTierOnlyFilter) {
       setIsSearchActive(true);
-      const tierFilter = filter === 'FREE' ? 'FREE' : filter === 'PRO' ? 'PRO' : 'ALL';
       searchCourses(searchQuery, tierFilter);
     } else {
       setIsSearchActive(false);

@@ -33,33 +33,18 @@ export const InstructorCourses: React.FC = () => {
     try {
       setIsLoading(true);
       const fetchedCourses = await coursesService.getMyCourses();
-      
-      // Load stats for each course
-      const coursesWithStats = await Promise.all(
-        fetchedCourses.map(async (course) => {
-          try {
-            const stats = await coursesService.getStats(course.id);
-            return {
-              ...course,
-              students: stats.students?.total || 0,
-              rating: stats.rating || 0,
-              modulesCount: stats.content?.modules || 0,
-              lessonsCount: stats.content?.lessons || 0,
-            };
-          } catch (err) {
-            // If stats fail, return course without stats
-            return {
-              ...course,
-              students: 0,
-              rating: 0,
-              modulesCount: course.modules?.length || 0,
-              lessonsCount: 0,
-            };
-          }
-        })
-      );
-      
-      setCourses(coursesWithStats);
+
+      // Avoid N stats calls (one per course) on this screen.
+      // We can still render basic information from my-courses directly.
+      const coursesWithDefaults = fetchedCourses.map((course) => ({
+        ...course,
+        students: 0,
+        rating: 0,
+        modulesCount: course.modules?.length || 0,
+        lessonsCount: 0,
+      }));
+
+      setCourses(coursesWithDefaults);
     } catch (err: any) {
       console.error('Error loading courses:', err);
       setError(err.response?.data?.message || 'Error al cargar los cursos');

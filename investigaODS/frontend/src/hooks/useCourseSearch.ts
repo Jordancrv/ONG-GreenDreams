@@ -9,7 +9,10 @@ export const useCourseSearch = () => {
   const { error, handleError, clearError } = useApiError();
 
   const searchCourses = useCallback(async (searchQuery: string, tierFilter?: 'FREE' | 'PRO' | 'ALL') => {
-    if (!searchQuery.trim()) {
+    const normalizedQuery = searchQuery.trim();
+    const hasTierFilter = !!tierFilter && tierFilter !== 'ALL';
+
+    if (!normalizedQuery && !hasTierFilter) {
       setCourses([]);
       return;
     }
@@ -18,9 +21,13 @@ export const useCourseSearch = () => {
     clearError();
     
     try {
-      const filters: any = { q: searchQuery };
+      const filters: any = {};
+
+      if (normalizedQuery) {
+        filters.q = normalizedQuery;
+      }
       
-      if (tierFilter && tierFilter !== 'ALL') {
+      if (hasTierFilter) {
         filters.tier = tierFilter;
       }
 

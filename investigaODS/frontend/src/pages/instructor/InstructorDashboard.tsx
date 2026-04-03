@@ -44,10 +44,10 @@ export const InstructorDashboard: React.FC = () => {
       
       // Load instructor's courses
       const fetchedCourses = await coursesService.getMyCourses();
-      
-      // Load stats for each course
-      const coursesWithStats = await Promise.all(
-        fetchedCourses.slice(0, 2).map(async (course) => {
+
+      // Fetch stats once per course and reuse for both cards and totals
+      const coursesWithAllStats = await Promise.all(
+        fetchedCourses.map(async (course) => {
           try {
             const courseStats = await coursesService.getStats(course.id);
             return {
@@ -62,29 +62,25 @@ export const InstructorDashboard: React.FC = () => {
               rating: 0,
             };
           }
-        })
+        }),
       );
-      
-      setCourses(coursesWithStats);
-      
-      // Calculate overall stats
+
+      // Show only first 2 courses in dashboard cards
+      setCourses(coursesWithAllStats.slice(0, 2));
+
+      // Calculate overall stats from already fetched values
       let totalStudents = 0;
       let activeCourses = 0;
-      
-      for (const course of fetchedCourses) {
-        try {
-          const courseStats = await coursesService.getStats(course.id);
-          totalStudents += courseStats.students?.total || 0;
-          if (course.visibility === 'PUBLIC') {
-            activeCourses++;
-          }
-        } catch (err) {
-          // Skip if stats fail
+
+      for (const course of coursesWithAllStats) {
+        totalStudents += course.students || 0;
+        if (course.visibility === 'PUBLIC') {
+          activeCourses++;
         }
       }
       
       setStats({
-        totalCourses: fetchedCourses.length,
+        totalCourses: coursesWithAllStats.length,
         totalStudents,
         activeCourses,
         pendingReviews: 0, // TODO: Implement reviews system
