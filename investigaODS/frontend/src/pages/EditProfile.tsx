@@ -33,6 +33,25 @@ export const EditProfile: React.FC = () => {
                    user?.role === 'ADMIN' ? 'ADMIN' :
                    user?.tier === 'PRO' ? 'STUDENT_PRO' : 'STUDENT_FREE';
 
+  const normalizeAvatarUrl = (url?: string): string => {
+    if (!url) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'investigaods_backend') {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const avatarSrc = normalizeAvatarUrl(user?.avatarUrl);
+  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Usuario')}&background=0D3B80&color=fff`;
+
   // Load user data
   useEffect(() => {
     if (user) {
@@ -285,8 +304,11 @@ export const EditProfile: React.FC = () => {
               borderRadius: theme.borderRadius.md,
             }}>
               <img
-                src={user?.avatarUrl || 'https://via.placeholder.com/96?text=Avatar'}
+                src={avatarSrc || avatarFallback}
                 alt="Foto de perfil"
+                onError={(e) => {
+                  e.currentTarget.src = avatarFallback;
+                }}
                 style={{
                   width: '96px',
                   height: '96px',

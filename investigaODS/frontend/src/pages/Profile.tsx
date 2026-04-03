@@ -30,6 +30,25 @@ export const Profile: React.FC = () => {
                    user?.role === 'ADMIN' ? 'ADMIN' :
                    user?.tier === 'PRO' ? 'STUDENT_PRO' : 'STUDENT_FREE';
 
+  const normalizeAvatarUrl = (url?: string): string => {
+    if (!url) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'investigaods_backend') {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const avatarSrc = normalizeAvatarUrl(user?.avatarUrl);
+  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Usuario')}&background=0D3B80&color=fff`;
+
   // Load instructor stats
   useEffect(() => {
     const loadInstructorStats = async () => {
@@ -175,8 +194,11 @@ export const Profile: React.FC = () => {
             justifyContent: 'center',
           }}>
             <img
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400"
+              src={avatarSrc || avatarFallback}
               alt={`${user?.firstName} ${user?.lastName}`}
+              onError={(e) => {
+                e.currentTarget.src = avatarFallback;
+              }}
               style={{
                 width: '100%',
                 height: '100%',

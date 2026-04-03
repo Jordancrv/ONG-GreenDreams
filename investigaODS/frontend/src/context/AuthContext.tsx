@@ -64,8 +64,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userPlan, setUserPlan] = useState<PlanCode>('BASIC');
   const [isLoading, setIsLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
+    if (initialLoadDone) {
+      return;
+    }
+
     // Intentar cargar usuario desde localStorage y validar con backend
     const loadUser = async () => {
       const storedUser = localStorage.getItem('investiga_user');
@@ -97,10 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setIsLoading(false);
+      setInitialLoadDone(true);
     };
 
     loadUser();
-  }, []);
+  }, [initialLoadDone]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
