@@ -47,15 +47,14 @@ export class FileUploadController {
       return service.getMulterOptions();
     })()),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+  uploadFile(@UploadedFile() file: Express.Multer.File, @Req() _req: Request) {
     // Si no se envió ningún archivo, lanzamos un error
     if (!file) {
       throw new BadRequestException('No se envió ningún archivo');
     }
 
-    // Construimos la URL pública del archivo
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const url = this.fileUploadService.getFileUrl(file.filename, baseUrl);
+    // Devolvemos URL relativa para evitar hosts internos de Docker
+    const url = this.fileUploadService.getFileUrl(file.filename);
 
     // Devolvemos la información del archivo subido
     return {

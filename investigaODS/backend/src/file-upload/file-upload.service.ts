@@ -57,7 +57,10 @@ export class FileUploadService {
    * Construye y devuelve la URL pública del archivo subido.
    * Ejemplo: "http://localhost:3000/api/files/a3f2c1d4-uuid.jpg"
    */
-  getFileUrl(filename: string, baseUrl: string): string {
+  getFileUrl(filename: string, baseUrl?: string): string {
+    if (!baseUrl) {
+      return `/api/files/${filename}`;
+    }
     return `${baseUrl}/api/files/${filename}`;
   }
 }

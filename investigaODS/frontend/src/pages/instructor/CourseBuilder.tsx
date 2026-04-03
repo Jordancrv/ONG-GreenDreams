@@ -5,13 +5,21 @@ import { AppHeader } from '../../components/AppHeader';
 import { BottomNavigation } from '../../components/mobile';
 import { theme } from '../../styles/theme';
 import { ROUTES } from '../../utils/constants';
-import { coursesService, tagsService } from '../../services/api.service';
+import { coursesService, filesService, tagsService } from '../../services/api.service';
 import type { Course } from '../../types';
 
 interface Tag {
   id: number;
   name: string;
 }
+
+type LessonAttachment = {
+  name: string;
+  url: string;
+  mimetype?: string;
+  size?: number;
+  filename?: string;
+};
 
 export const CourseBuilder: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +58,9 @@ export const CourseBuilder: React.FC = () => {
   const [lessonContent, setLessonContent] = useState('');
   const [lessonDuration, setLessonDuration] = useState('');
   const [lessonVideoUrl, setLessonVideoUrl] = useState('');
+  const [lessonAttachments, setLessonAttachments] = useState<LessonAttachment[]>([]);
+  const [selectedLessonFile, setSelectedLessonFile] = useState<File | null>(null);
+  const [isUploadingLessonFile, setIsUploadingLessonFile] = useState(false);
 
   useEffect(() => {
     if (courseId) {
@@ -295,7 +306,34 @@ export const CourseBuilder: React.FC = () => {
     setLessonContent('');
     setLessonDuration('');
     setLessonVideoUrl('');
+    setLessonAttachments([]);
+    setSelectedLessonFile(null);
     setShowLessonModal(true);
+  };
+
+  const parseLessonAttachments = (resources: unknown): LessonAttachment[] => {
+    if (!resources || typeof resources !== 'object') {
+      return [];
+    }
+
+    const attachments = (resources as { attachments?: unknown }).attachments;
+    if (!Array.isArray(attachments)) {
+      return [];
+    }
+
+    return attachments
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => {
+        const file = item as Record<string, unknown>;
+        return {
+          name: String(file.name ?? 'Archivo'),
+          url: String(file.url ?? ''),
+          mimetype: file.mimetype ? String(file.mimetype) : undefined,
+          size: typeof file.size === 'number' ? file.size : undefined,
+          filename: file.filename ? String(file.filename) : undefined,
+        };
+      })
+      .filter((item) => item.url);
   };
 
   const handleEditLesson = (moduleId: number, lesson: any) => {
@@ -305,7 +343,53 @@ export const CourseBuilder: React.FC = () => {
     setLessonContent(lesson.content || '');
     setLessonDuration(lesson.durationMin?.toString() || '');
     setLessonVideoUrl(lesson.videoUrl || '');
+    setLessonAttachments(parseLessonAttachments(lesson.resources));
+    setSelectedLessonFile(null);
     setShowLessonModal(true);
+  };
+
+  const handleUploadLessonFile = async () => {
+    if (!selectedLessonFile) {
+      return;
+    }
+
+    try {
+      setIsUploadingLessonFile(true);
+      const uploaded = await filesService.upload(selectedLessonFile);
+
+      setLessonAttachments((prev) => [
+        ...prev,
+        {
+          name: uploaded.originalname,
+          url: uploaded.url,
+          mimetype: uploaded.mimetype,
+          size: uploaded.size,
+          filename: uploaded.filename,
+        },
+      ]);
+
+      if (!lessonVideoUrl && uploaded.mimetype.startsWith('video/')) {
+        setLessonVideoUrl(uploaded.url);
+      }
+
+      setSelectedLessonFile(null);
+    } catch (err: any) {
+      console.error('Error uploading file:', err);
+      alert(err.response?.data?.message || 'Error al subir el archivo');
+    } finally {
+      setIsUploadingLessonFile(false);
+    }
+  };
+
+  const handleRemoveAttachment = (url: string) => {
+    setLessonAttachments((prev) => prev.filter((item) => item.url !== url));
+  };
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes || Number.isNaN(bytes)) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const handleCreateLesson = async () => {
@@ -319,6 +403,7 @@ export const CourseBuilder: React.FC = () => {
           content: lessonContent,
           durationMin: lessonDuration ? Number(lessonDuration) : undefined,
           videoUrl: lessonVideoUrl || undefined,
+          resources: lessonAttachments.length > 0 ? { attachments: lessonAttachments } : undefined,
         });
         alert('✅ Lección actualizada exitosamente');
       } else {
@@ -332,6 +417,7 @@ export const CourseBuilder: React.FC = () => {
           durationMin: lessonDuration ? Number(lessonDuration) : undefined,
           videoUrl: lessonVideoUrl || undefined,
           position: nextIndex,
+          resources: lessonAttachments.length > 0 ? { attachments: lessonAttachments } : undefined,
         });
         alert('✅ Lección agregada exitosamente');
       }
@@ -967,12 +1053,15 @@ export const CourseBuilder: React.FC = () => {
                             backgroundColor: 'rgba(255, 255, 255, 0.05)',
                             borderRadius: '8px',
                             marginBottom: '10px',
+                          }}
+                        >
+                          <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                          }}
-                        >
-                          <div>
+                            gap: '12px',
+                          }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
                               color: 'rgba(255, 255, 255, 0.6)',
                               fontSize: '12px',
@@ -994,6 +1083,44 @@ export const CourseBuilder: React.FC = () => {
                             }}>
                               {lesson.durationMin ? `Duración: ${lesson.durationMin} min` : 'Duración no especificada'}
                             </div>
+
+                            {parseLessonAttachments(lesson.resources).length > 0 && (
+                              <div style={{ marginTop: '10px' }}>
+                                <div style={{
+                                  color: theme.colors.secondary,
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  marginBottom: '6px',
+                                }}>
+                                  Adjuntos ({parseLessonAttachments(lesson.resources).length})
+                                </div>
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px',
+                                }}>
+                                  {parseLessonAttachments(lesson.resources).slice(0, 3).map((file) => (
+                                    <a
+                                      key={file.url}
+                                      href={file.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{
+                                        color: theme.colors.primary,
+                                        fontSize: '12px',
+                                        textDecoration: 'none',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                      title={file.name}
+                                    >
+                                      {file.name}{file.size ? ` (${formatBytes(file.size)})` : ''}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div style={{ display: 'flex', gap: '8px' }}>
@@ -1029,6 +1156,7 @@ export const CourseBuilder: React.FC = () => {
                             >
                               🗑️
                             </button>
+                          </div>
                           </div>
                         </div>
                       ))
@@ -1476,6 +1604,120 @@ export const CourseBuilder: React.FC = () => {
                     outline: 'none',
                   }}
                 />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  color: 'white',
+                  fontSize: '16px',
+                  marginBottom: '10px',
+                  fontWeight: 'bold',
+                }}>
+                  Adjuntos de la Lección
+                </label>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                  flexWrap: 'wrap',
+                }}>
+                  <input
+                    type="file"
+                    onChange={(e) => setSelectedLessonFile(e.target.files?.[0] ?? null)}
+                    style={{
+                      flex: 1,
+                      minWidth: '220px',
+                      color: 'white',
+                    }}
+                  />
+                  <button
+                    onClick={handleUploadLessonFile}
+                    disabled={!selectedLessonFile || isUploadingLessonFile}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: selectedLessonFile && !isUploadingLessonFile
+                        ? theme.colors.secondary
+                        : 'rgba(255, 255, 255, 0.15)',
+                      color: selectedLessonFile && !isUploadingLessonFile
+                        ? theme.colors.textDark
+                        : 'rgba(255, 255, 255, 0.6)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      cursor: selectedLessonFile && !isUploadingLessonFile ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {isUploadingLessonFile ? 'Subiendo...' : 'Subir archivo'}
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}>
+                  {lessonAttachments.length === 0 ? (
+                    <div style={{
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontSize: '13px',
+                      padding: '10px 12px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      borderRadius: '8px',
+                    }}>
+                      No hay archivos adjuntos todavía.
+                    </div>
+                  ) : (
+                    lessonAttachments.map((file) => (
+                      <div
+                        key={file.url}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: theme.colors.primary,
+                            textDecoration: 'none',
+                            fontSize: '13px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '400px',
+                          }}
+                          title={file.name}
+                        >
+                          {file.name}
+                        </a>
+                        <button
+                          onClick={() => handleRemoveAttachment(file.url)}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                            color: '#ff6b6b',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                          }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
               <div style={{

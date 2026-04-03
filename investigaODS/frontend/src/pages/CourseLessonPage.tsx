@@ -135,6 +135,25 @@ export const CourseLessonPage: React.FC = () => {
     return progress?.lessons?.find((l: any) => l.lessonId === checkLessonId)?.completed || false;
   };
 
+  const normalizeMediaUrl = (url?: string): string => {
+    if (!url) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'investigaods_backend') {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const normalizedVideoUrl = normalizeMediaUrl(currentLesson?.videoUrl);
+  const isIframeVideo = /youtube\.com|youtu\.be|vimeo\.com/i.test(normalizedVideoUrl);
+
   if (!isAuthenticated) {
     navigate(ROUTES.LOGIN);
     return null;
@@ -471,7 +490,7 @@ export const CourseLessonPage: React.FC = () => {
             </div>
 
             {/* Video */}
-            {currentLesson.videoUrl && (
+            {normalizedVideoUrl && (
               <div style={{
                 marginBottom: isMobile ? '32px' : '40px',
                 borderRadius: '12px',
@@ -481,16 +500,26 @@ export const CourseLessonPage: React.FC = () => {
                 aspectRatio: '16/9',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
               }}>
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src={currentLesson.videoUrl}
-                  title={currentLesson.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  style={{ display: 'block', border: 'none' }}
-                />
+                {isIframeVideo ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={normalizedVideoUrl}
+                    title={currentLesson.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ display: 'block', border: 'none' }}
+                  />
+                ) : (
+                  <video
+                    controls
+                    style={{ width: '100%', height: '100%', display: 'block' }}
+                    src={normalizedVideoUrl}
+                  >
+                    Tu navegador no soporta reproducción de video.
+                  </video>
+                )}
               </div>
             )}
 

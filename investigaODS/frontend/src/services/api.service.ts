@@ -398,6 +398,37 @@ export const tagsService = {
 };
 
 // ============================================
+// FILES SERVICE
+// ============================================
+
+export interface UploadedFileResponse {
+  message: string;
+  filename: string;
+  originalname: string;
+  mimetype: string;
+  size: number;
+  url: string;
+}
+
+export const filesService = {
+  /**
+   * Upload a file and get its public URL
+   */
+  async upload(file: File): Promise<UploadedFileResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
+  },
+};
+
+// ============================================
 // QUIZZES SERVICE
 // ============================================
 
