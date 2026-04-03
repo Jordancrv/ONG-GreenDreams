@@ -196,7 +196,14 @@ export class CoursesService {
   async createModule(courseId: number, dto: CreateModuleDto, user: User) {
     const course = await this.findById(courseId);
     this.assertCanManageCourse(course, user);
-    const position = dto.position ?? dto.index;
+    let position = dto.position ?? dto.index;
+    if (position === undefined) {
+      const lastModule = await this.modulesRepository.findOne({
+        where: { course: { id: courseId } },
+        order: { position: 'DESC' },
+      });
+      position = (lastModule?.position ?? -1) + 1;
+    }
     const module = this.modulesRepository.create({
       course,
       ...dto,
@@ -243,7 +250,14 @@ export class CoursesService {
       throw new NotFoundException('Module not found');
     }
     this.assertCanManageCourse(module.course, user);
-    const position = dto.position ?? dto.index;
+    let position = dto.position ?? dto.index;
+    if (position === undefined) {
+      const lastLesson = await this.lessonsRepository.findOne({
+        where: { module: { id: moduleId } },
+        order: { position: 'DESC' },
+      });
+      position = (lastLesson?.position ?? -1) + 1;
+    }
     const lesson = this.lessonsRepository.create({
       module,
       ...dto,

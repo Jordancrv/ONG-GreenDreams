@@ -9,7 +9,7 @@ export class CourseModule extends BaseEntity {
   @ManyToOne(() => Course, (course) => course.modules, { onDelete: 'CASCADE', nullable: false })
   course!: Course;
 
-  @Column({ name: 'position' })
+  @Column({ name: 'index' })
   position!: number;
 
   @Column()

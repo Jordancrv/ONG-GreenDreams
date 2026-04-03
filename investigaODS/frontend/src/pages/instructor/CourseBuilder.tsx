@@ -275,7 +275,7 @@ export const CourseBuilder: React.FC = () => {
         await coursesService.createModule(Number(courseId), {
           title: moduleTitle,
           summary: moduleSummary,
-          index: nextIndex,
+          position: nextIndex,
         });
         alert('✅ Módulo agregado exitosamente');
       }
@@ -331,7 +331,7 @@ export const CourseBuilder: React.FC = () => {
           content: lessonContent,
           durationMin: lessonDuration ? Number(lessonDuration) : undefined,
           videoUrl: lessonVideoUrl || undefined,
-          index: nextIndex,
+          position: nextIndex,
         });
         alert('✅ Lección agregada exitosamente');
       }

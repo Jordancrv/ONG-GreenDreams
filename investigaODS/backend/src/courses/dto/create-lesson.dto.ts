@@ -2,7 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateLessonDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Lesson order position (0-based)' })
+  @IsOptional()
   @IsInt()
   @Min(0)
   position!: number;
