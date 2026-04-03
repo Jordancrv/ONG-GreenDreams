@@ -7,7 +7,7 @@ import { BottomNavigation } from '../components/mobile';
 import { AppHeader } from '../components/AppHeader';
 import { HelpButton } from '../components/HelpButton';
 import { useAuth } from '../hooks/useAuth';
-import { usersService } from '../services/api.service';
+import { filesService, usersService } from '../services/api.service';
 
 export const EditProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +25,8 @@ export const EditProfile: React.FC = () => {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
   const userRole = user?.role === 'INSTRUCTOR' ? 'INSTRUCTOR' : 
@@ -139,6 +141,35 @@ export const EditProfile: React.FC = () => {
     }
   };
 
+  const handleAvatarUpload = async () => {
+    if (!selectedAvatarFile) {
+      setErrors((prev) => ({ ...prev, submit: 'Selecciona una imagen para subir.' }));
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setErrors((prev) => ({ ...prev, submit: '' }));
+    setSuccessMessage('');
+
+    try {
+      const uploaded = await filesService.upload(selectedAvatarFile);
+      const updatedUser = await usersService.updateProfile({ avatarUrl: uploaded.url });
+
+      if (updateUser) {
+        updateUser(updatedUser);
+      }
+
+      setSelectedAvatarFile(null);
+      setSuccessMessage('Foto de perfil actualizada exitosamente.');
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      const errorMessage = error.response?.data?.message || 'Error al subir la foto de perfil';
+      setErrors((prev) => ({ ...prev, submit: errorMessage }));
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   return (
     <div style={{
       width: '100%',
@@ -232,6 +263,75 @@ export const EditProfile: React.FC = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
+          {/* Avatar Section */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{
+              fontSize: theme.typography.fontSize.lg,
+              fontWeight: theme.typography.fontWeight.semibold,
+              color: theme.colors.textPrimary,
+              marginBottom: '16px',
+            }}>
+              Foto de Perfil
+            </h3>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '16px',
+              alignItems: isMobile ? 'stretch' : 'center',
+              padding: '16px',
+              backgroundColor: theme.colors.card,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.md,
+            }}>
+              <img
+                src={user?.avatarUrl || 'https://via.placeholder.com/96?text=Avatar'}
+                alt="Foto de perfil"
+                style={{
+                  width: '96px',
+                  height: '96px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: `2px solid ${theme.colors.border}`,
+                }}
+              />
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedAvatarFile(e.target.files?.[0] ?? null)}
+                  style={{
+                    width: '100%',
+                    marginBottom: '10px',
+                    color: theme.colors.textPrimary,
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleAvatarUpload}
+                  disabled={!selectedAvatarFile || isUploadingAvatar}
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: selectedAvatarFile && !isUploadingAvatar
+                      ? theme.colors.primary
+                      : theme.colors.border,
+                    color: selectedAvatarFile && !isUploadingAvatar
+                      ? 'white'
+                      : theme.colors.textSecondary,
+                    border: 'none',
+                    borderRadius: theme.borderRadius.md,
+                    cursor: selectedAvatarFile && !isUploadingAvatar ? 'pointer' : 'not-allowed',
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
+                  {isUploadingAvatar ? 'Subiendo...' : 'Actualizar foto'}
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Personal Information Section */}
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{
