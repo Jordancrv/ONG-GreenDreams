@@ -69,7 +69,7 @@ export class CoursesService {
   async findMyCourses(user: User) {
     const courses = await this.coursesRepository.find({
       where: { owner: { id: user.id } },
-      relations: ['owner', 'tags', 'modules'],
+      relations: ['owner', 'tags'],
       order: { createdAt: 'DESC' },
     });
     return courses.map((course) => this.stripCourseOwner(course));
@@ -139,27 +139,44 @@ export class CoursesService {
     const course = await this.findById(courseId);
     this.assertCanManageCourse(course, user);
 
-    // Count enrollments
-    const totalStudents = await this.enrollmentsRepository.count({
-      where: { course: { id: courseId } },
-    });
+    const totalStudentsResult = await this.enrollmentsRepository
+      .createQueryBuilder('enrollment')
+      .select('COUNT(*)', 'count')
+      .where('enrollment.course_id = :courseId', { courseId })
+      .getRawOne<{ count: string }>();
 
-    const activeStudents = await this.enrollmentsRepository.count({
-      where: { course: { id: courseId }, status: EnrollmentStatus.ACTIVE },
-    });
+    const activeStudentsResult = await this.enrollmentsRepository
+      .createQueryBuilder('enrollment')
+      .select('COUNT(*)', 'count')
+      .where('enrollment.course_id = :courseId', { courseId })
+      .andWhere('enrollment.status = :status', { status: EnrollmentStatus.ACTIVE })
+      .getRawOne<{ count: string }>();
 
-    const completedStudents = await this.enrollmentsRepository.count({
-      where: { course: { id: courseId }, status: EnrollmentStatus.COMPLETED },
-    });
+    const completedStudentsResult = await this.enrollmentsRepository
+      .createQueryBuilder('enrollment')
+      .select('COUNT(*)', 'count')
+      .where('enrollment.course_id = :courseId', { courseId })
+      .andWhere('enrollment.status = :status', { status: EnrollmentStatus.COMPLETED })
+      .getRawOne<{ count: string }>();
 
-    // Count modules and lessons
-    const modules = await this.modulesRepository.find({
-      where: { course: { id: courseId } },
-      relations: ['lessons'],
-    });
+    const totalModulesResult = await this.modulesRepository
+      .createQueryBuilder('module')
+      .select('COUNT(*)', 'count')
+      .where('module.course_id = :courseId', { courseId })
+      .getRawOne<{ count: string }>();
 
-    const totalModules = modules.length;
-    const totalLessons = modules.reduce((sum, mod) => sum + (mod.lessons?.length || 0), 0);
+    const totalLessonsResult = await this.lessonsRepository
+      .createQueryBuilder('lesson')
+      .innerJoin('course_modules', 'module', 'module.id = lesson.module_id')
+      .select('COUNT(*)', 'count')
+      .where('module.course_id = :courseId', { courseId })
+      .getRawOne<{ count: string }>();
+
+    const totalStudents = Number(totalStudentsResult?.count ?? 0);
+    const activeStudents = Number(activeStudentsResult?.count ?? 0);
+    const completedStudents = Number(completedStudentsResult?.count ?? 0);
+    const totalModules = Number(totalModulesResult?.count ?? 0);
+    const totalLessons = Number(totalLessonsResult?.count ?? 0);
 
     return {
       courseId,
