@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit2 } from 'lucide-react';
 import { theme } from '../styles/theme';
@@ -8,16 +8,18 @@ import { AppHeader } from '../components/AppHeader';
 import { HelpButton } from '../components/HelpButton';
 import { useAuth } from '../hooks/useAuth';
 import { useEnrollments } from '../hooks/useEnrollments';
-import { progressService, certificatesService, coursesService } from '../services/api.service';
+import { progressService, certificatesService, coursesService, filesService, usersService } from '../services/api.service';
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { enrollments, isLoading: enrollmentsLoading } = useEnrollments();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
   const [certificatesCount, setCertificatesCount] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
   // Instructor stats
   const [instructorStats, setInstructorStats] = useState({
@@ -48,6 +50,37 @@ export const Profile: React.FC = () => {
 
   const avatarSrc = normalizeAvatarUrl(user?.avatarUrl);
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Usuario')}&background=0D3B80&color=fff`;
+
+  const handleAvatarButtonClick = () => {
+    if (isUploadingAvatar) {
+      return;
+    }
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploaded = await filesService.upload(file);
+      const updated = await usersService.updateProfile({ avatarUrl: uploaded.url });
+      if (updateUser) {
+        updateUser(updated);
+      }
+    } catch (error) {
+      console.error('Error uploading avatar from profile:', error);
+      alert('No se pudo actualizar la foto de perfil. Intenta nuevamente.');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
 
   // Load instructor stats
   useEffect(() => {
@@ -183,6 +216,13 @@ export const Profile: React.FC = () => {
           position: 'relative',
           marginBottom: '24px',
         }}>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarFileChange}
+            style={{ display: 'none' }}
+          />
           <div style={{
             width: isMobile ? '140px' : '180px',
             height: isMobile ? '140px' : '180px',
@@ -207,6 +247,8 @@ export const Profile: React.FC = () => {
             />
           </div>
           <button
+            onClick={handleAvatarButtonClick}
+            disabled={isUploadingAvatar}
             style={{
               position: 'absolute',
               bottom: '8px',
@@ -216,16 +258,28 @@ export const Profile: React.FC = () => {
               borderRadius: '50%',
               backgroundColor: 'white',
               border: 'none',
-              cursor: 'pointer',
+              cursor: isUploadingAvatar ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: theme.shadows.md,
+              opacity: isUploadingAvatar ? 0.7 : 1,
             }}
             aria-label="Editar foto"
           >
             <Edit2 size={20} color="#062860" />
           </button>
+          {isUploadingAvatar && (
+            <p style={{
+              marginTop: '10px',
+              marginBottom: 0,
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+              fontSize: theme.typography.fontSize.sm,
+            }}>
+              Subiendo foto...
+            </p>
+          )}
         </div>
 
         {/* User Name */}
