@@ -36,7 +36,15 @@ export const Explore: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
   const { user } = useAuth();
-  const { tags, isLoading: isLoadingTags } = useTags();
+  const {
+    tags,
+    currentPage: tagsPage,
+    totalPages: tagsTotalPages,
+    hasPreviousPage: hasPreviousTagsPage,
+    hasNextPage: hasNextTagsPage,
+    goToPage: goToTagsPage,
+    isLoading: isLoadingTags,
+  } = useTags();
   const {
     courses: searchResults,
     total,
@@ -294,25 +302,74 @@ export const Explore: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: '16px',
-            }}>
-              {tags.map((tag, index) => (
-                <div
-                  key={tag.id}
-                  onClick={() => navigate(`/courses/tag/${encodeURIComponent(tag.name)}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CategoryCard
-                    code={tag.name.substring(0, 3).toUpperCase()}
-                    name={tag.name}
-                    color={getCategoryColor(index)}
-                  />
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '16px',
+              }}>
+                {tags.map((tag, index) => (
+                  <div
+                    key={tag.id}
+                    onClick={() => navigate(`/courses/tag/${encodeURIComponent(tag.name)}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <CategoryCard
+                      code={tag.name.substring(0, 3).toUpperCase()}
+                      name={tag.name}
+                      color={getCategoryColor(index)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {tagsTotalPages > 1 ? (
+                <div style={{
+                  marginTop: '20px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}>
+                  <button
+                    onClick={() => goToTagsPage(tagsPage - 1)}
+                    disabled={!hasPreviousTagsPage}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: theme.borderRadius.full,
+                      border: `1px solid ${theme.colors.primary}`,
+                      backgroundColor: 'transparent',
+                      color: theme.colors.textPrimary,
+                      cursor: !hasPreviousTagsPage ? 'not-allowed' : 'pointer',
+                      opacity: !hasPreviousTagsPage ? 0.6 : 1,
+                    }}
+                  >
+                    Anterior
+                  </button>
+
+                  <span style={{ color: theme.colors.textSecondary }}>
+                    Categorias {tagsPage} de {tagsTotalPages}
+                  </span>
+
+                  <button
+                    onClick={() => goToTagsPage(tagsPage + 1)}
+                    disabled={!hasNextTagsPage}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: theme.borderRadius.full,
+                      border: `1px solid ${theme.colors.primary}`,
+                      backgroundColor: 'transparent',
+                      color: theme.colors.textPrimary,
+                      cursor: !hasNextTagsPage ? 'not-allowed' : 'pointer',
+                      opacity: !hasNextTagsPage ? 0.6 : 1,
+                    }}
+                  >
+                    Siguiente
+                  </button>
                 </div>
-              ))}
-            </div>
+              ) : null}
+            </>
           )}
         </section>
 

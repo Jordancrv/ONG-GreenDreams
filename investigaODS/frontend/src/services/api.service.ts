@@ -431,12 +431,26 @@ export interface Tag {
   name: string;
 }
 
+export interface TagPaginationParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+}
+
 export const tagsService = {
   /**
    * Get all tags
    */
   async getAll(): Promise<Tag[]> {
     const response = await api.get('/tags');
+    return response.data;
+  },
+
+  /**
+   * Get tags with pagination
+   */
+  async getPaginated(params: TagPaginationParams): Promise<PaginatedResponse<Tag>> {
+    const response = await api.get('/tags/paginated', { params });
     return response.data;
   },
 };

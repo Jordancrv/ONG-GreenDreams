@@ -14,7 +14,7 @@ export const useCourseSearch = () => {
     searchQuery: string,
     tierFilter?: 'FREE' | 'PRO' | 'ALL',
     page = 1,
-    limit = 9,
+    limit = 12,
   ) => {
     const normalizedQuery = searchQuery.trim();
     const hasTierFilter = !!tierFilter && tierFilter !== 'ALL';
