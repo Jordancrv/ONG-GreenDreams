@@ -28,6 +28,7 @@ export const EditProfile: React.FC = () => {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const avatarInputId = 'avatar-file-input';
 
   const userRole = user?.role === 'INSTRUCTOR' ? 'INSTRUCTOR' : 
                    user?.role === 'ADMIN' ? 'ADMIN' :
@@ -320,21 +321,56 @@ export const EditProfile: React.FC = () => {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <input
+                  id={avatarInputId}
                   type="file"
                   accept="image/*"
                   onChange={(e) => setSelectedAvatarFile(e.target.files?.[0] ?? null)}
                   style={{
-                    width: '100%',
-                    marginBottom: '10px',
-                    color: theme.colors.textPrimary,
+                    display: 'none',
                   }}
                 />
+
+                <label
+                  htmlFor={avatarInputId}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '160px',
+                    padding: '10px 16px',
+                    borderRadius: theme.borderRadius.md,
+                    backgroundColor: theme.colors.card,
+                    border: `1px solid ${theme.colors.border}`,
+                    color: theme.colors.textPrimary,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    marginBottom: '10px',
+                  }}
+                >
+                  Elegir archivo
+                </label>
+
+                <p
+                  style={{
+                    margin: '0 0 12px 0',
+                    fontSize: theme.typography.fontSize.sm,
+                    color: selectedAvatarFile ? theme.colors.textPrimary : theme.colors.textSecondary,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'normal',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {selectedAvatarFile?.name || 'No se ha seleccionado ningun archivo'}
+                </p>
 
                 <button
                   type="button"
                   onClick={handleAvatarUpload}
                   disabled={!selectedAvatarFile || isUploadingAvatar}
                   style={{
+                    width: '160px',
                     padding: '10px 16px',
                     backgroundColor: selectedAvatarFile && !isUploadingAvatar
                       ? theme.colors.primary
