@@ -71,7 +71,7 @@ export const Explore: React.FC = () => {
 
     if (hasQuery || hasTierOnlyFilter) {
       setIsSearchActive(true);
-      searchCourses(searchQuery, tierFilter, currentPage, 9);
+      searchCourses(searchQuery, tierFilter, currentPage, 12);
     } else {
       setIsSearchActive(false);
       clearSearch();
