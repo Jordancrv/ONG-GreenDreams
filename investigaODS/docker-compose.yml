@@ -38,7 +38,7 @@ services:
     container_name: investigaods_backend
     env_file:
       - ./backend/.env
-    command: sh -c "npm run prebuild && npm run seed && npm run start:dev"
+    command: sh -c "npm run prebuild && npm run schema:sync && npm run seed && npm run start:dev"
     ports:
       - "3000:3000"
     depends_on:

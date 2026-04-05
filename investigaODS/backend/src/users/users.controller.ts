@@ -19,10 +19,10 @@ export class UsersController {
     if (!found) {
       return null;
     }
-    const { passwordHash, role, ...rest } = found as any;
+    const { passwordHash, ...rest } = found as any;
     return {
       ...rest,
-      role: role?.code ?? found.roleCode,
+      role: found.roleCode,
     };
   }
 
@@ -30,10 +30,10 @@ export class UsersController {
   async updateProfile(@CurrentUser() user: User, @Body() dto: UpdateUserDto) {
     const { role, ...restDto } = dto;
     const updated = await this.usersService.update(user.id, restDto);
-    const { passwordHash, role: updatedRole, ...rest } = updated as any;
+    const { passwordHash, ...rest } = updated as any;
     return {
       ...rest,
-      role: updatedRole?.code ?? updated.roleCode,
+      role: updated.roleCode,
     };
   }
 }

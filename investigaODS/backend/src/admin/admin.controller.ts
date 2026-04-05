@@ -23,10 +23,10 @@ export class AdminController {
   async listUsers() {
     const users = await this.usersService.findAll();
     return users.map((user) => {
-      const { passwordHash, role, ...rest } = user as any;
+      const { passwordHash, ...rest } = user as any;
       return {
         ...rest,
-        role: role?.code ?? user.roleCode,
+        role: user.roleCode,
       };
     });
   }
@@ -34,10 +34,10 @@ export class AdminController {
   @Patch('users/:id')
   async updateUser(@Param('id') id: number, @Body() dto: UpdateUserDto) {
     const updated = await this.usersService.update(Number(id), dto);
-    const { passwordHash, role, ...rest } = updated as any;
+    const { passwordHash, ...rest } = updated as any;
     return {
       ...rest,
-      role: role?.code ?? updated.roleCode,
+      role: updated.roleCode,
     };
   }
 

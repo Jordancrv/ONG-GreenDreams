@@ -91,10 +91,10 @@ export class AuthService {
   }
 
   stripPassword(user: User) {
-    const { passwordHash, role, ...rest } = user as any;
+    const { passwordHash, ...rest } = user as any;
     return {
       ...rest,
-      role: role?.code ?? user.roleCode,
+      role: user.roleCode,
     };
   }
 
